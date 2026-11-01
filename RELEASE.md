@@ -97,10 +97,10 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* [docs/configuration-model.md › Rules](docs/configuration-model.md#rules) (rules 1–4 for Fullstack)
   - *Files:* `cli/` (schema, validation), `cli/test/`
   - *Done when:* one test per rule, and a violation exits non-zero with the rule number in the message. The template `b7.json` validates.
-- [x] **4.3 Option flags and prompts.** needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
+- [x] **4.3 Option flags and prompts.** (4d26280) needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
   - *Files:* `cli/index.js`, `cli/README.md`, `cli/test/`
   - *Done when:* `--organizations`, `--billing <stripe|none>` and `--email <resend|none>` exist with matching prompts. Only options with a tested overlay are offered. The generated `b7.json` records the resolved configuration, including derived values.
-- [ ] **4.4 CI matrix over representative configurations.** needs: 4.3
+- [ ] **4.4 CI matrix over representative configurations.** needs: 4.3. In progress: the matrix runs configuration 1 (`--email none`) and the default (`--email resend`); configuration 2 is added with 5.1 and 5.2.
   - *Spec:* [docs/configuration-model.md › Representative configurations](docs/configuration-model.md#representative-configurations)
   - *Files:* `.github/workflows/cli.yml`
   - *Done when:* CI generates configurations 1 and 2 (once their overlays exist) and runs each project's checks.

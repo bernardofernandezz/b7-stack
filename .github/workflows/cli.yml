@@ -7,7 +7,15 @@ on:
 # Packs create-b7 the way npm publishes it, generates a project and runs that project's checks and Docker stack.
 jobs:
   generated-project:
+    name: generated-project (${{ matrix.config.name }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Representative configurations (docs/configuration-model.md). Add config 2 once organizations and billing exist.
+        config:
+          - { name: minimal, args: "--email none" }
+          - { name: email, args: "--email resend" }
     services:
       postgres:
         image: postgres:17-alpine
@@ -24,7 +32,7 @@ jobs:
         working-directory: cli
       - run: npm pack
         working-directory: cli
-      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git
+      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Check generated project
         working-directory: ${{ runner.temp }}/demo-app
@@ -40,7 +48,15 @@ jobs:
           pnpm run test:e2e
 
   generated-stack:
+    name: generated-stack (${{ matrix.config.name }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Representative configurations (docs/configuration-model.md). Add config 2 once organizations and billing exist.
+        config:
+          - { name: minimal, args: "--email none" }
+          - { name: email, args: "--email resend" }
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -49,7 +65,7 @@ jobs:
         with: { node-version: 26 }
       - run: pnpm install && npm pack
         working-directory: cli
-      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git
+      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Run the Compose stack and E2E through Caddy
         working-directory: ${{ runner.temp }}/demo-app

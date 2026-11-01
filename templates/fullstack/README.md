@@ -123,4 +123,4 @@ None of these are installed. Each adds only what the [feature table](../../docs/
 
 ## Known limitations
 
-- The build bundles Kysely's SQLite dialects pulled in by Better Auth. They are unused, but they count toward bundle size.
+- The build contains Kysely's SQLite dialects pulled in by Better Auth. They are lazy `import()` chunks that never load with the Drizzle adapter, and cost about 0.3 MB of disk in the image.

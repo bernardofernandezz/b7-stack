@@ -78,11 +78,11 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [x] **3.2 Require email verification when email is configured.** (cce01e6)
   - *Files:* `templates/fullstack/src/modules/auth/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* an unverified user cannot sign in (test), and the E2E flow verifies through the logged email link in dev.
-- [x] **3.3 No session RPC on every client navigation.**
+- [x] **3.3 No session RPC on every client navigation.** (c3e9c7a)
   - *Files:* `templates/fullstack/src/routes/__root.tsx`, `src/lib/orpc.ts`
   - *Done when:* the session is read through TanStack Query with a cache, and an E2E asserts that navigating between two pages makes no `/api/rpc` session request after the first.
 - [x] **3.4 Fail clearly on a query after the per-request pool closes.** (dcd2848) Obsolete with 2.1: the pool now lives for the whole process, so the limitation no longer exists.
-- [ ] **3.5 Drop Kysely's unused SQLite dialects from the bundle.**
+- [x] **3.5 Drop Kysely's unused SQLite dialects from the bundle.** Closed without a code change: on Node.js the dialects are lazy `import()` chunks that never load (about 0.3 MB of a 529 MB image), and aliasing them away could break on Better Auth upgrades.
   - *Files:* `templates/fullstack/vite.config.ts`
   - *Done when:* `dist/server` is smaller than before (1.8 MB uncompressed on 2026-11-01), and all checks stay green. If no safe alias exists, mark `[x]` with the reason and leave the limitation.
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -17,7 +17,10 @@ test("scaffolds the fullstack template", () => {
   assert.deepEqual(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")), {
     profile: "fullstack",
     options: { email: "resend" },
+    derived: { scheduler: false },
   });
+  assert.ok(!existsSync(join(app, "b7.features.json")));
+  assert.deepEqual(markersIn(app), []);
   const env = readFileSync(join(app, ".env"), "utf8");
   assert.match(env, /^BETTER_AUTH_SECRET=[A-Za-z0-9+/]{43}=$/m);
   const password = env.match(/^POSTGRES_PASSWORD=([0-9a-f]{32})$/m)?.[1];
@@ -26,6 +29,37 @@ test("scaffolds the fullstack template", () => {
   for (const file of ["Dockerfile", "compose.yaml", "Caddyfile", ".dockerignore"]) assert.ok(existsSync(join(app, file)));
   assert.ok(existsSync(join(app, ".gitignore")));
   for (const skipped of ["node_modules", "dist", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
+});
+
+/** Files that still contain a region marker after generation. */
+const markersIn = (dir) =>
+  readdirSync(dir, { recursive: true }).filter((f) => {
+    try {
+      return /^\s*\S+\s*#(if|endif)\b/m.test(readFileSync(join(dir, f), "utf8"));
+    } catch {
+      return false; // a directory
+    }
+  });
+
+test("--email none drops the email feature", () => {
+  const app = join(mkdtempSync(join(tmpdir(), "b7-")), "no-email");
+  create(app, "--email", "none");
+
+  const pkg = JSON.parse(readFileSync(join(app, "package.json"), "utf8"));
+  assert.equal(pkg.dependencies.resend, undefined);
+  for (const gone of ["src/modules/email", "src/routes/forgot-password.tsx", "test/email.test.ts", "drizzle"])
+    assert.ok(!existsSync(join(app, gone)), gone);
+  const auth = readFileSync(join(app, "src/modules/auth/auth.ts"), "utf8");
+  assert.doesNotMatch(auth, /sendEmail|requireEmailVerification/);
+  assert.doesNotMatch(readFileSync(join(app, ".env.example"), "utf8"), /RESEND_API_KEY/);
+  assert.equal(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")).options.email, "none");
+  assert.deepEqual(markersIn(app), []);
+});
+
+test("configuration rule violations exit with the rule number", () => {
+  const base = mkdtempSync(join(tmpdir(), "b7-"));
+  assert.throws(() => create(join(base, "a"), "--email", "smtp"), (e) => e.stdout.includes("Rule 1"));
+  assert.throws(() => create(join(base, "b"), "--billing", "stripe"), (e) => e.stdout.includes("Rule 1"));
 });
 
 test("rejects invalid names and unknown templates", () => {

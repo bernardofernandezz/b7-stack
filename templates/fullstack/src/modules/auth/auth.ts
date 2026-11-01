@@ -3,8 +3,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Db } from "../../db/client";
 import * as schema from "../../db/schema";
 import type { AppEnv } from "../../env";
+// #if email
 import { sendEmail } from "../email/send";
 import { resetPasswordEmail, verificationEmail } from "../email/templates";
+
+// #endif
 
 type AuthDeps = {
   db: Db;
@@ -13,7 +16,7 @@ type AuthDeps = {
   waitUntil?: (promise: Promise<unknown>) => void;
 };
 
-/** Built per request because the database client is request-scoped. */
+/** Built once per process, next to the database pool (src/start.ts). */
 export function createAuth({ db, env, waitUntil }: AuthDeps) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
@@ -22,12 +25,15 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
-      // Email is configured in this template, so an address must be proven before it can sign in.
+      // #if email
+      // Email is configured, so an address must be proven before it can sign in.
       requireEmailVerification: true,
       sendResetPassword: ({ user, url }) => sendEmail(env, resetPasswordEmail(user.email, user.name, url)),
       // A reset ends every existing session, so a stolen session does not survive the password change.
       revokeSessionsOnPasswordReset: true,
+      // #endif
     },
+    // #if email
     emailVerification: {
       sendOnSignUp: true,
       // An unverified sign-in attempt re-sends the link (sign-in is rate-limited).
@@ -35,6 +41,7 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
       autoSignInAfterVerification: true,
       sendVerificationEmail: ({ user, url }) => sendEmail(env, verificationEmail(user.email, user.name, url)),
     },
+    // #endif
     // Database storage, so limits hold across app replicas. Enabled explicitly so dev and tests exercise it.
     rateLimit: { enabled: true, storage: "database" },
     advanced: {

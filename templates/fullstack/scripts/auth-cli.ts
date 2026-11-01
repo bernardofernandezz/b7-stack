@@ -8,7 +8,9 @@ export const auth = createAuth({
     DATABASE_URL: "postgres://localhost/unused",
     BETTER_AUTH_SECRET: "x".repeat(32),
     BETTER_AUTH_URL: "http://localhost:3000",
+    // #if email
     EMAIL_FROM: "unused",
     RESEND_API_KEY: undefined,
+    // #endif
   },
 });

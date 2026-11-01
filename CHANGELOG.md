@@ -18,6 +18,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - Documented why Kysely's SQLite dialects stay in the build: they are lazy chunks that never load (3.5).
 - ADR-014: options compose by removing feature regions from a complete template (4.1).
 - `create-b7` validates configurations against rules 1–4 (errors name the rule) and applies feature regions; templates declare their options in `b7.features.json` (4.2).
+- `create-b7 --email resend|none` (and prompts): a smaller configuration drops files, dependencies and regions, then gets a fresh migration, route tree, lockfile and formatting. The default email option is `resend` (4.3).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

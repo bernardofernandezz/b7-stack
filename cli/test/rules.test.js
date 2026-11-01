@@ -56,10 +56,13 @@ test("regions keep or drop lines by condition and remove markers", () => {
     "-- #if email",
     "mail",
     "-- #endif",
+    "<!-- #if !email -->",
+    "no mail",
+    "<!-- #endif -->",
     "z",
   ].join("\n");
   const features = { organizations: false, billing: "stripe", email: "none" };
-  assert.equal(applyRegions(text, features), ["a", "solo", "stripe", "z"].join("\n"));
+  assert.equal(applyRegions(text, features), ["a", "solo", "stripe", "no mail", "z"].join("\n"));
   assert.equal(holds("email", { email: "resend" }), true);
   assert.equal(holds("email", { email: "none" }), false);
 });

@@ -1,7 +1,10 @@
 {
   "$comment": "Options this template supports and what each one owns (ADR-014). The template itself has every option on.",
   "options": {
-    "email": { "choices": ["resend", "none"], "default": "resend" }
+    "email": {
+      "choices": ["resend", "none"],
+      "default": "resend"
+    }
   },
   "features": {
     "email": {
@@ -11,7 +14,9 @@
         "src/routes/reset-password.tsx",
         "test/email.test.ts",
         "test/password-reset.test.ts",
-        "e2e/password-reset.spec.ts"
+        "e2e/password-reset.spec.ts",
+        "src/modules/auth/email-ui.tsx",
+        "e2e/helpers.ts"
       ],
       "dependencies": ["resend"]
     }

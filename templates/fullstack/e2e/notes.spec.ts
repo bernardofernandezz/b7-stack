@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
+// #if email
 import { verificationLink } from "./helpers";
 
-test("sign up, verify the email, keep a note across reloads, sign out", async ({ page }) => {
+// #endif
+
+test("sign up, keep a note across reloads, sign out", async ({ page }) => {
   // Wait for hydration: before it, buttons are inert SSR markup.
   await page.goto("/sign-in", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "No account? Sign up" }).click();
@@ -10,10 +13,11 @@ test("sign up, verify the email, keep a note across reloads, sign out", async ({
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("correct-horse-battery");
   await page.getByRole("button", { name: "Sign up" }).click();
+  // #if email
   await expect(page.getByText("Verify your email")).toBeVisible();
-
   // The emailed link signs the user in and redirects home.
   await page.goto(await verificationLink(email), { waitUntil: "networkidle" });
+  // #endif
   await expect(page.getByText(email)).toBeVisible();
 
   const content = `note ${Date.now()}`;

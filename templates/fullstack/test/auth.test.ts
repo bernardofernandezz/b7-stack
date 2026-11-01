@@ -2,7 +2,10 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
+// #if email
 import { signUpVerified } from "./helpers";
+
+// #endif
 
 const env = parseEnv(process.env);
 const { db, close } = createDb(env.DATABASE_URL);
@@ -47,6 +50,7 @@ describe("Better Auth rate limiting (database storage, x-forwarded-for)", () => 
   });
 });
 
+// #if email
 describe("email verification", () => {
   it("starts no session at sign-up and refuses sign-in until the address is verified", async () => {
     const email = `${crypto.randomUUID()}@example.com`;
@@ -59,7 +63,8 @@ describe("email verification", () => {
   });
 
   it("signs in through the verification link", async () => {
-    const { headers } = await signUpVerified(auth, env.BETTER_AUTH_SECRET);
+    const { headers } = await signUpVerified(auth);
     expect((await auth.api.getSession({ headers }))?.user.emailVerified).toBe(true);
   });
 });
+// #endif

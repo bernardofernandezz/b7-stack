@@ -13,7 +13,7 @@ afterAll(close);
 
 const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, headers } });
 
-const signUp = async () => (await signUpVerified(auth, env.BETTER_AUTH_SECRET)).headers;
+const signUp = async () => (await signUpVerified(auth)).headers;
 
 const rejectsWith = (promise: Promise<unknown>, code: string) =>
   expect(promise).rejects.toSatisfy((e) => e instanceof ORPCError && e.code === code);
@@ -62,6 +62,11 @@ describe("notes procedures", () => {
   it("returns the session from the public session procedure", async () => {
     expect(await clientFor(new Headers()).session()).toBeNull();
     const session = await clientFor(await signUp()).session();
+    // #if email
     expect(session?.user.emailVerified).toBe(true); // sign-in requires a verified address
+    // #endif
+    // #if !email
+    expect(session?.user.email).toMatch(/@example\.com$/);
+    // #endif
   });
 });

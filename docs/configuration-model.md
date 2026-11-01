@@ -28,7 +28,7 @@ type FullstackOptions = {
   organizations: boolean;                      // default false
   oauthProviders: string[];                    // default []
   billing: "none" | "stripe" | "abacatepay";   // default "none"; abacatepay is EXPERIMENTAL
-  email: "none" | "resend";                    // default "none"
+  email: "none" | "resend";                    // default "resend" (the CLI default; required by organizations)
   storage: "none" | "s3";                      // default "none"; any S3-compatible service (MinIO, R2, S3)
   queues: boolean;                             // default false; a `worker` Compose service
   publicApi: boolean;                          // default false: oRPC OpenAPIHandler at /api/v1

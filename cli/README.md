@@ -1,8 +1,8 @@
 # create-b7 (preview)
 
 ```sh
-npm create b7@latest my-app                    # asks which template
-npm create b7@latest my-app -- -t fullstack    # or: pnpm create b7 my-app -t fullstack
+npm create b7@latest my-app                                  # asks for the template and its options
+npm create b7@latest my-app -- -t fullstack --email none     # or: pnpm create b7 my-app -t fullstack --email none
 ```
 
 Copies a template from [`templates/`](../templates), including its `b7.json` (the configuration it implements), creates `.env` with a generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, runs `git init` and `pnpm install` (when pnpm is missing it says how to install it, since Node.js 25+ no longer ships corepack).
@@ -12,6 +12,7 @@ Each directory in `templates/` is a template, so adding `templates/web` makes `-
 | Flag | Effect |
 |------|--------|
 | `--template`, `-t <name>` | Template to use. Without it, the CLI asks (or takes the first with `--yes`) |
+| `--email <resend\|none>` · `--[no-]organizations` · `--billing <stripe\|none>` | [Configuration options](../docs/configuration-model.md#b7-fullstack). A template offers only those in its `b7.features.json`; the rest are rejected with rule 1. Without a flag, the CLI asks (or uses the default with `--yes`) |
 | `--yes`, `-y` | Accept defaults, no prompts |
 | `--no-install` · `--no-git` | Skip `pnpm install` · `git init` |
 | `--version`, `-v` · `--help`, `-h` | Print the version · usage |
@@ -27,7 +28,7 @@ Each directory in `templates/` is a template, so adding `templates/web` makes `-
 3. **Generate.** Write only the packages, files, Compose services and `.env.example` entries that the [feature table](../docs/configuration-model.md#fullstack-features-what-each-one-adds) lists for the selected options.
 4. **Record.** Write `b7.json` with the resolved configuration, including derived values, for later `b7 add <option>` commands.
 
-The preview implements steps 1, 3 and 4 for the one tested configuration. Options, validation rules, other profiles and `b7 add` arrive as each gets a tested template ([ROADMAP.md](../ROADMAP.md)).
+All four steps are implemented. Options compose by removing feature regions from the complete template ([ADR-014](../docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)): a smaller configuration also gets a fresh `drizzle/` migration, a regenerated route tree and an updated lockfile (`pnpm install`, or `--lockfile-only` with `--no-install`). Other profiles and `b7 add` arrive as each gets a tested template ([ROADMAP.md](../ROADMAP.md)).
 
 Shared packages (`packages/`) are created only when two or more templates actually share code.
 

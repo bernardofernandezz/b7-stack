@@ -93,11 +93,11 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Default proposal:* overlay directories `templates/fullstack/+<option>/` copied over the base in a fixed order. `package.json` is deep-merged. `compose.yaml`, `.env.example` and `src/env.ts` are patched at marked insertion points. Overlays are excluded when the base is used as a template.
   - *Files:* `docs/technology-decisions.md`
   - *Done when:* the ADR states the mechanism, the rejected alternatives, and how one overlay is tested on its own.
-- [x] **4.2 Configuration schema and rules.** needs: 4.1. Plain JS validation in `cli/config.js` (no Zod dependency for six options), regions in `cli/regions.js`, options in `templates/fullstack/b7.features.json`.
+- [x] **4.2 Configuration schema and rules.** (9731f1f) needs: 4.1. Plain JS validation in `cli/config.js` (no Zod dependency for six options), regions in `cli/regions.js`, options in `templates/fullstack/b7.features.json`.
   - *Spec:* [docs/configuration-model.md › Rules](docs/configuration-model.md#rules) (rules 1–4 for Fullstack)
   - *Files:* `cli/` (schema, validation), `cli/test/`
   - *Done when:* one test per rule, and a violation exits non-zero with the rule number in the message. The template `b7.json` validates.
-- [ ] **4.3 Option flags and prompts.** needs: 4.2
+- [x] **4.3 Option flags and prompts.** needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
   - *Files:* `cli/index.js`, `cli/README.md`, `cli/test/`
   - *Done when:* `--organizations`, `--billing <stripe|none>` and `--email <resend|none>` exist with matching prompts. Only options with a tested overlay are offered. The generated `b7.json` records the resolved configuration, including derived values.
 - [ ] **4.4 CI matrix over representative configurations.** needs: 4.3

@@ -18,7 +18,7 @@ beforeEach(() => {
 
 const sentEmails = () => fetch.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
 
-const signUp = (password: string) => signUpVerified(auth, env.BETTER_AUTH_SECRET, password);
+const signUp = (password: string) => signUpVerified(auth, password);
 
 /** Requests a reset and returns the token from the link in the email. */
 async function resetToken(email: string) {

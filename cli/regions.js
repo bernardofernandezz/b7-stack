@@ -1,8 +1,8 @@
 // Feature regions (ADR-014): lines between `#if <cond>` and `#endif` markers, in any comment style
-// (`// #if x`, `# #if x`, `{/* #if x */}`), are kept only when <cond> holds. Marker lines are always removed.
+// (`// #if x`, `# #if x`, `-- #if x`, `{/* #if x */}`, `<!-- #if x -->`), are kept only when <cond> holds. Marker lines are always removed.
 // <cond> is `name`, `!name` or `name=value`. Regions do not nest.
 
-const MARKER = /^\s*(?:\/\/|#|\{\/\*|--)\s*#(if|endif)\b\s*([^*\s]*)/;
+const MARKER = /^\s*(?:\/\/|#|\{\/\*|<!--|--)\s*#(if|endif)\b\s*([^*\s]*)/;
 
 /** Whether a region condition holds for the enabled features ({ email: "resend", organizations: true, ... }). */
 export function holds(cond, features) {

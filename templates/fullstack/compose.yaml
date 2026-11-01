@@ -32,8 +32,10 @@ services:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/b7
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
       BETTER_AUTH_URL: ${APP_URL:-http://localhost}
+      # #if email
       EMAIL_FROM: ${EMAIL_FROM:-B7 <onboarding@resend.dev>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # #endif
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped

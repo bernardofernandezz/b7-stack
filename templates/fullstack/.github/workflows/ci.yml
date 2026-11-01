@@ -16,7 +16,9 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/b7
       BETTER_AUTH_URL: http://localhost:3000
+      # #if email
       EMAIL_FROM: B7 <onboarding@resend.dev>
+      # #endif
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4 # version from package.json "packageManager"

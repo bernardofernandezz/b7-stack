@@ -1,12 +1,13 @@
 # B7 Fullstack reference implementation
 
-The runnable form of [B7 Fullstack](../../stacks/fullstack/README.md), for this configuration:
+The runnable form of [B7 Fullstack](../../stacks/fullstack/README.md). `b7.json` records this project's configuration. `create-b7` generates smaller configurations by removing options from this template ([ADR-014](../../docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)).
 
-```json
-{ "profile": "fullstack", "options": { "email": "resend" } }
-```
+Core: TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Drizzle, Tailwind + Base UI + Lucide, Node.js in Docker.
+<!-- #if email -->
+Email: Resend, for email verification (required to sign in) and password reset.
+<!-- #endif -->
 
-Core (TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Drizzle, Tailwind + Base UI + Lucide, Node.js in Docker) plus Resend. The example domain is a per-user notes list: small, but it covers SSR, typed RPC, validation, persistence, sessions and authorization.
+The example domain is a per-user notes list: small, but it covers SSR, typed RPC, validation, persistence, sessions and authorization.
 
 **Preview.** The whole stack runs and passes its tests in Docker Compose. It has not yet run on a public host with a real domain and real email. See [verification status](#verification-status).
 
@@ -22,7 +23,9 @@ pnpm run db:migrate
 pnpm run dev                           # http://localhost:3000
 ```
 
+<!-- #if email -->
 Without `RESEND_API_KEY`, the dev server prints emails to its log instead of sending them. Sign-in requires a verified address, so open the verification link from that log after signing up. In a production build, a missing key is an error.
+<!-- #endif -->
 
 | Command | What it does |
 |---------|--------------|
@@ -50,7 +53,9 @@ Configuration comes from `.env`:
 
 1. `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` are required (`create-b7` generates both).
 2. `APP_URL` is the public URL. `http://localhost` (the default) serves plain HTTP. `https://app.example.com` makes Caddy obtain a Let's Encrypt certificate: point the domain's DNS at the host and open ports 80 and 443.
+<!-- #if email -->
 3. `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend) for real email. `onboarding@resend.dev` delivers only to your own Resend account address.
+<!-- #endif -->
 
 To deploy, copy the project to any host with Docker (or `git pull` there) and run the command above. To update, pull and run it again: `migrate` applies new migrations before the new `app` starts. Back up the `pgdata` volume, for example with `docker compose exec postgres pg_dump -U postgres b7`.
 
@@ -69,7 +74,7 @@ Request flow and ownership follow [architecture.md](../../stacks/fullstack/archi
 | `src/routes/api/rpc.$.ts` | oRPC `RPCHandler` (`ANY`), behind `createCsrfMiddleware()` |
 | `src/lib/orpc.ts` | Isomorphic client: in-process `createRouterClient` during SSR (reading the request context via `getGlobalStartContext()`), `RPCLink` in the browser, TanStack Query utils |
 | `src/rpc/` | Root router, `requireSession` / `authed` |
-| `src/modules/<name>/` | `schema.ts` · `service.ts` · `procedures.ts`. `auth`, `email`, `notes`, and the unwired `billing` contract |
+| `src/modules/<name>/` | `schema.ts` · `service.ts` · `procedures.ts`. `auth`, `notes`, `email` (when configured) and the unwired `billing` contract |
 | `src/env.ts` | Zod schema for the environment, parsed once at startup |
 | `src/db/` | `createDb()` and the schema barrel that Drizzle Kit and Better Auth read |
 | `Dockerfile`, `compose.yaml`, `Caddyfile` | Images and the production stack |
@@ -99,15 +104,21 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 | Revocation is immediate after sign-out (H-T1) | Tested | Vitest |
 | Auth rate limiting, database storage (BA-T2) | Tested locally and in Compose | `test/auth.test.ts`: 429 after 3 sign-ins / 10 s, other IP unaffected. Through Caddy, a forged `X-Forwarded-For` does not bypass the limit (curl: 401 401 401 429 429) |
 | Untrusted `Origin` rejected by Better Auth | Tested | `test/auth.test.ts` |
+<!-- #if email -->
 | Email verification required: no session at sign-up, unverified sign-in refused (and the link re-sent), the link signs in | Tested locally and in Compose | `test/auth.test.ts`, `e2e/notes.spec.ts` (signs the link with `BETTER_AUTH_SECRET`) |
+<!-- #endif -->
 | Session read once: SSR fills the query cache, client navigation makes no session request, sign-in and sign-out clear the cache | Tested locally and in Compose | `e2e/navigation.spec.ts` (fails with 4 requests on the previous code) |
+<!-- #if email -->
 | Password reset: email link, single-use token, all sessions revoked, same answer for unknown addresses | Tested locally and in Compose | `test/password-reset.test.ts`, `e2e/password-reset.spec.ts` (reads the token from the database) |
+<!-- #endif -->
 | Cross-site RPC rejected by CSRF middleware (T-T4) | Tested in a production build | curl with a foreign `Origin` and `Sec-Fetch-Site: cross-site` gives 403. Not automated |
+<!-- #if email -->
 | Resend `sendEmail()` | Tested with Resend faked at the HTTP boundary | `test/email.test.ts`. **Never sent through the live Resend API** (no key available) |
+<!-- #endif -->
 | Production build and images | Tested | `vite build`, `docker compose up --build --wait` (all services healthy), runtime image 529 MB |
 | Billing contract (states, entitlements, Stripe/AbacatePay status maps) | Implemented, unit-tested, **not wired** | `test/billing.test.ts`. No adapter, tables, webhook route or scheduler |
 | CI workflow | Written, **never run** | `.github/workflows/ci.yml`. Its steps were run by hand |
-| Public host with a domain and HTTPS, real email, load (D-T2) | **Not tested** | Needs a server, a domain and a Resend key |
+| Public host with a domain and HTTPS, real email, load (D-T2) | **Not tested** | Needs a server and a domain (and a Resend key for email) |
 
 ## Adding optional modules
 

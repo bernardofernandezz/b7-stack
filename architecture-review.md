@@ -188,7 +188,7 @@ All tests run against a **deployed** Worker with a real Hyperdrive binding, unle
 | M-T1 | Org A user calls every tenant procedure with org B resource IDs | `NOT_FOUND`, no data | Tenant isolation |
 | M-T2 | Session with `activeOrganizationId = null` | `NO_ACTIVE_ORGANIZATION` | Membership |
 | M-T3 | `member` role calls a `billing: ["manage"]` procedure | `FORBIDDEN` | Permissions |
-| M-T4 | `auth.api.hasPermission` after membership removal, and with another org active | Documents its actual behavior. Allowed only if it rejects both | M-2 |
+| M-T4 | `auth.api.hasPermission` after membership removal, and with another org active | Documents its actual behavior. Allowed only if it rejects both. **Not needed:** B7 checks roles from the member row and never calls `hasPermission` | M-2 |
 | S-T1 | `constructEventAsync` with SubtleCrypto verifies a `generateTestHeaderString` payload in workerd (*local* and deployed) | Valid accepted. Tampered body, wrong secret and expired timestamp rejected | S4 |
 | S-T2 | `customer.subscription.updated` and `.deleted` delivered in reverse order | Final status `canceled` | A8 |
 | S-T3 | Checkout Session creation links the subscription to `customer_ref` | The webhook sync finds the right customer | S5 |

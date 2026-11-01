@@ -1,6 +1,7 @@
 {
   "profile": "fullstack",
   "options": {
-    "email": "resend"
+    "email": "resend",
+    "organizations": true
   }
 }

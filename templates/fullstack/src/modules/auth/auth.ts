@@ -6,6 +6,9 @@ import type { AppEnv } from "../../env";
 // #if email
 import { sendEmail } from "../email/send";
 import { resetPasswordEmail, verificationEmail } from "../email/templates";
+// #endif
+// #if organizations
+import { organizationPlugin } from "../organizations/plugin";
 
 // #endif
 
@@ -41,6 +44,9 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
       autoSignInAfterVerification: true,
       sendVerificationEmail: ({ user, url }) => sendEmail(env, verificationEmail(user.email, user.name, url)),
     },
+    // #endif
+    // #if organizations
+    plugins: [organizationPlugin(env)],
     // #endif
     // Database storage, so limits hold across app replicas. Enabled explicitly so dev and tests exercise it.
     rateLimit: { enabled: true, storage: "database" },

@@ -58,6 +58,13 @@ function RootLayout() {
         </Link>
         {session ? (
           <div className="flex items-center gap-3 text-sm">
+            {/* #if organizations */}
+            {session.organization && (
+              <Link to="/organization" className="font-medium underline">
+                {session.organization.name}
+              </Link>
+            )}
+            {/* #endif */}
             <span className="text-zinc-600">{session.user.email}</span>
             <Button variant="ghost" onClick={signOut} aria-label="Sign out">
               <LogOut size={16} />

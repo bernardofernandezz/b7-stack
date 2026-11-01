@@ -73,12 +73,12 @@ Every org-scoped procedure runs this chain. Nothing in it trusts client-supplied
 
 1. **`requireSession`** loads the session. No session gives `UNAUTHORIZED`.
 2. **`requireMembership`** reads `organizationId` from `session.activeOrganizationId`, **never from input**. If it is `null` (the default for new sessions), it fails with `NO_ACTIVE_ORGANIZATION`. It then loads the `member` row `WHERE organization_id = $org AND user_id = $user` from PostgreSQL (uncached binding). If there is no row, it fails with `FORBIDDEN`. **The active organization ID alone never proves membership.** A user removed from an org keeps a stale `activeOrganizationId` until it is changed.
-3. **`requirePermission(statement)`** checks the **role from the freshly loaded member row** against B7's access-control statements (`createAccessControl` from `better-auth/plugins/access`). Using `auth.api.hasPermission` instead is allowed only after test `M-T4` confirms it scopes to the active org and re-checks membership. Its docs do not state either.
+3. **`requirePermission(statement)`** checks the **role from the freshly loaded member row** against B7's access-control statements (`createAccessControl` from `better-auth/plugins/access`), in `src/modules/organizations/`. B7 does not call `auth.api.hasPermission`, so test `M-T4` is not needed; using it later requires `M-T4` first.
 4. The procedure receives `{ userId, organizationId, role }` from middleware context and passes `organizationId` explicitly to services.
 
 Procedures that act on a specific resource load that resource **with** `organization_id = ctx.organizationId` in the `WHERE` clause. A resource ID belonging to another organization therefore produces `NOT_FOUND`, not a leak.
 
-Initial active organization: optionally set it in the `databaseHooks.session.create.before` hook to the user's most recent membership. That is a convenience only, and step 2 still applies.
+Initial active organization: creating an organization or accepting an invitation makes it active (Better Auth does this). A user with none sees "Create your organization". Step 2 still applies.
 
 Invitations require the plugin's `sendInvitationEmail` callback, so **organizations ⇒ email** is a hard rule (see the [configuration model](../../docs/configuration-model.md#rules)).
 

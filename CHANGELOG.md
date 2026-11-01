@@ -20,8 +20,11 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - `create-b7` validates configurations against rules 1–4 (errors name the rule) and applies feature regions; templates declare their options in `b7.features.json` (4.2).
 - `create-b7 --email resend|none` (and prompts): a smaller configuration drops files, dependencies and regions, then gets a fresh migration, route tree, lockfile and formatting. The default email option is `resend` (4.3).
 - CI generates each representative configuration and runs its checks and Compose E2E (4.4, partial).
+- `create-b7 --organizations`: Better Auth organizations with owner/admin/member roles, invitations by email, `/organization` and `/accept-invitation/$id` pages, and notes scoped to the active organization; membership is read from the database on every call (5.1).
 
 ### Changed
+- The template's migrations are squashed into one `0000_init` (nothing was deployed yet) (5.1).
+- Through Caddy, CI runs only the smoke, notes and navigation E2E flows, because auth rate limits are real there; the full suite runs against the dev server (5.1).
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).
 - `create-b7` writes `.env` (with generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`) instead of `.dev.vars` (2.1).
 - Auth rate limiting reads the client IP from `X-Forwarded-For`, which only Caddy sets; the origin check is explicitly on, so tests exercise it (2.1).

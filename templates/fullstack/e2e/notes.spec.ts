@@ -19,6 +19,11 @@ test("sign up, keep a note across reloads, sign out", async ({ page }) => {
   await page.goto(await verificationLink(email), { waitUntil: "networkidle" });
   // #endif
   await expect(page.getByText(email)).toBeVisible();
+  // #if organizations
+  await page.getByLabel("Organization name").fill("E2E Org");
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await expect(page.getByRole("link", { name: "E2E Org" })).toBeVisible();
+  // #endif
 
   const content = `note ${Date.now()}`;
   await page.getByLabel("New note").fill(content);

@@ -72,7 +72,8 @@ jobs:
         run: |
           docker compose up -d --build --wait
           pnpm exec playwright install --with-deps chromium
-          BASE_URL=http://localhost pnpm exec playwright test
+          # Auth rate limits are real through Caddy, so only the production-stack flows run here (see the template CI).
+          BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation
       - if: failure()
         working-directory: ${{ runner.temp }}/demo-app
         run: docker compose logs

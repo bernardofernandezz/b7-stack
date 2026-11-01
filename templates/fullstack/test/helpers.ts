@@ -21,3 +21,17 @@ export async function signUpVerified(auth: Auth, password = "correct-horse-batte
   // #endif
   return { email, headers: new Headers({ cookie: cookieHeader(headers) }) };
 }
+
+/** A user ready for tenant procedures: with organizations, the owner of a new organization, made active. */
+export async function signUpWithScope(auth: Auth, password?: string) {
+  const user = await signUpVerified(auth, password);
+  let organizationId = "";
+  // #if organizations
+  const org = await auth.api.createOrganization({
+    body: { name: "Test org", slug: `org-${crypto.randomUUID()}` },
+    headers: user.headers,
+  });
+  organizationId = org?.id ?? "";
+  // #endif
+  return { ...user, organizationId };
+}

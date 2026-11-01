@@ -4,7 +4,7 @@ import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
 import { router } from "../src/rpc/router";
-import { signUpVerified } from "./helpers";
+import { signUpWithScope } from "./helpers";
 
 const env = parseEnv(process.env);
 const { db, close } = createDb(env.DATABASE_URL);
@@ -13,7 +13,7 @@ afterAll(close);
 
 const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, headers } });
 
-const signUp = async () => (await signUpVerified(auth)).headers;
+const signUp = async () => (await signUpWithScope(auth)).headers;
 
 const rejectsWith = (promise: Promise<unknown>, code: string) =>
   expect(promise).rejects.toSatisfy((e) => e instanceof ORPCError && e.code === code);

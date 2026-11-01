@@ -16,7 +16,7 @@ test("scaffolds the fullstack template", () => {
   assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).name, "my-app");
   assert.deepEqual(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")), {
     profile: "fullstack",
-    options: { email: "resend" },
+    options: { email: "resend", organizations: false },
     derived: { scheduler: false },
   });
   assert.ok(!existsSync(join(app, "b7.features.json")));
@@ -29,6 +29,17 @@ test("scaffolds the fullstack template", () => {
   for (const file of ["Dockerfile", "compose.yaml", "Caddyfile", ".dockerignore"]) assert.ok(existsSync(join(app, file)));
   assert.ok(existsSync(join(app, ".gitignore")));
   for (const skipped of ["node_modules", "dist", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
+  assert.ok(!existsSync(join(app, "src/modules/organizations")));
+  assert.doesNotMatch(readFileSync(join(app, "src/modules/notes/schema.ts"), "utf8"), /organizationId/);
+});
+
+test("--organizations keeps the organizations feature", () => {
+  const app = join(mkdtempSync(join(tmpdir(), "b7-")), "orgs");
+  create(app, "--organizations");
+  assert.ok(existsSync(join(app, "src/modules/organizations/membership.ts")));
+  assert.match(readFileSync(join(app, "src/modules/notes/schema.ts"), "utf8"), /organizationId/);
+  assert.equal(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")).options.organizations, true);
+  assert.deepEqual(markersIn(app), []);
 });
 
 /** Files that still contain a region marker after generation. */
@@ -60,6 +71,7 @@ test("configuration rule violations exit with the rule number", () => {
   const base = mkdtempSync(join(tmpdir(), "b7-"));
   assert.throws(() => create(join(base, "a"), "--email", "smtp"), (e) => e.stdout.includes("Rule 1"));
   assert.throws(() => create(join(base, "b"), "--billing", "stripe"), (e) => e.stdout.includes("Rule 1"));
+  assert.throws(() => create(join(base, "c"), "--organizations", "--email", "none"), (e) => e.stdout.includes("Rule 2"));
 });
 
 test("rejects invalid names and unknown templates", () => {

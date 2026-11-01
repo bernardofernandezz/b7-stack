@@ -4,10 +4,17 @@ import { Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button, TextField } from "../components/ui";
 import { orpc } from "../lib/orpc";
+// #if organizations
+import { CreateOrganization } from "../modules/organizations/ui";
+// #endif
 
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
-    if (context.session) await context.queryClient.ensureQueryData(orpc.notes.list.queryOptions());
+    let canListNotes = Boolean(context.session);
+    // #if organizations
+    canListNotes = Boolean(context.session?.organization);
+    // #endif
+    if (canListNotes) await context.queryClient.ensureQueryData(orpc.notes.list.queryOptions());
   },
   component: Home,
 });
@@ -24,6 +31,9 @@ function Home() {
       </p>
     );
   }
+  // #if organizations
+  if (!session.organization) return <CreateOrganization />;
+  // #endif
   return <Notes />;
 }
 

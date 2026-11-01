@@ -1,6 +1,6 @@
 import type { Email } from "./send";
 
-const escapeHtml = (s: string) =>
+export const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 
 export function verificationEmail(to: string, name: string, url: string): Email {

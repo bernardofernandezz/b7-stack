@@ -4,6 +4,10 @@
     "email": {
       "choices": ["resend", "none"],
       "default": "resend"
+    },
+    "organizations": {
+      "choices": [false, true],
+      "default": false
     }
   },
   "features": {
@@ -19,6 +23,15 @@
         "e2e/helpers.ts"
       ],
       "dependencies": ["resend"]
+    },
+    "organizations": {
+      "files": [
+        "src/modules/organizations",
+        "src/routes/organization.tsx",
+        "src/routes/accept-invitation.$id.tsx",
+        "test/organizations.test.ts",
+        "e2e/organizations.spec.ts"
+      ]
     }
   }
 }

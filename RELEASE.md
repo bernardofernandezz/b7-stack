@@ -107,7 +107,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 5: Organizations and Stripe (1.0)
 
-- [ ] **5.1 `organizations` overlay.** needs: 4.1
+- [x] **5.1 `organizations` overlay.** needs: 4.1. Built as feature regions (ADR-014). M-T4 not needed: B7 never calls `hasPermission`.
   - *Spec:* [stacks/fullstack/authentication.md › With organizations](stacks/fullstack/authentication.md#with-organizations-optional), [Tenant isolation](stacks/fullstack/authentication.md#tenant-isolation)
   - *Files:* `templates/fullstack/+organizations/` (plugin, `requireMembership` and `requirePermission` in `src/rpc/`, `organization_id` on notes, invitations via Resend, migration)
   - *Done when:* H-T2 and M-T1…M-T4 pass locally, and the generated project's checks pass.

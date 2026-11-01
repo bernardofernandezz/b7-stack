@@ -6,6 +6,9 @@ Core: TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Dri
 <!-- #if email -->
 Email: Resend, for email verification (required to sign in) and password reset.
 <!-- #endif -->
+<!-- #if organizations -->
+Organizations: Better Auth's organization plugin. Notes belong to the active organization and are shared by its members; owners and admins invite members by email at `/organization`.
+<!-- #endif -->
 
 The example domain is a per-user notes list: small, but it covers SSR, typed RPC, validation, persistence, sessions and authorization.
 
@@ -111,6 +114,10 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 <!-- #if email -->
 | Password reset: email link, single-use token, all sessions revoked, same answer for unknown addresses | Tested locally and in Compose | `test/password-reset.test.ts`, `e2e/password-reset.spec.ts` (reads the token from the database) |
 <!-- #endif -->
+<!-- #if organizations -->
+| Organizations: create, invite by email, accept, notes shared within the organization | Tested locally and in Compose | `e2e/organizations.spec.ts` (reads the invitation ID from the database) |
+| Tenant isolation (M-T1), no active organization (M-T2), roles from the member row (M-T3), removed member rejected immediately (H-T2) | Tested | `test/organizations.test.ts` |
+<!-- #endif -->
 | Cross-site RPC rejected by CSRF middleware (T-T4) | Tested in a production build | curl with a foreign `Origin` and `Sec-Fetch-Site: cross-site` gives 403. Not automated |
 <!-- #if email -->
 | Resend `sendEmail()` | Tested with Resend faked at the HTTP boundary | `test/email.test.ts`. **Never sent through the live Resend API** (no key available) |
@@ -127,7 +134,7 @@ None of these are installed. Each adds only what the [feature table](../../docs/
 | Option | Where it plugs in | State |
 |--------|-------------------|-------|
 | `oauthProviders` | `socialProviders: { github: { clientId, clientSecret } }` in `createAuth`, the two env vars in `src/env.ts`, a button calling `authClient.signIn.social` | Prepared, not configured or tested |
-| `organizations` (needs email) | Better Auth `organization` plugin, `requireMembership`/`requirePermission` in `src/rpc/middleware.ts`, `organization_id` on tenant tables ([chain](../../stacks/fullstack/authentication.md#with-organizations-optional)) | Not implemented (M2) |
+| `organizations` (needs email) | Better Auth `organization` plugin, `scoped` in `src/rpc/middleware.ts` with `requireMembership`/`requirePermission` from `src/modules/organizations/`, `organization_id` on tenant tables ([chain](../../stacks/fullstack/authentication.md#with-organizations-optional)) | `create-b7 --organizations` |
 | `billing` | One adapter implementing `BillingProvider` in `src/modules/billing/adapters/`, the tables from [billing.md](../../stacks/fullstack/billing.md#tables), `src/routes/api/webhooks/<provider>.ts`, and a reconciliation scheduler | Contract only (M3/M5) |
 | `publicApi` | `@orpc/openapi`, `src/routes/api/v1.$.ts` with `OpenAPIHandler` over the same router | Not implemented |
 | `turnstile`, `sentry`, `passkeys` | See [infrastructure.md](../../stacks/fullstack/infrastructure.md#optional-services) | Not implemented |

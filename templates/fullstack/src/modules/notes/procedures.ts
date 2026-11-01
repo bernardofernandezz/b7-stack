@@ -1,16 +1,16 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { authed } from "../../rpc/middleware";
+import { scoped } from "../../rpc/middleware";
 import { createNote, deleteNote, listNotes } from "./service";
 
 export const notesRouter = {
-  list: authed.handler(({ context }) => listNotes(context.db, context.user.id)),
+  list: scoped.handler(({ context }) => listNotes(context.db, context.scope)),
 
-  create: authed
+  create: scoped
     .input(z.object({ content: z.string().trim().min(1).max(500) }))
-    .handler(({ context, input }) => createNote(context.db, context.user.id, input.content)),
+    .handler(({ context, input }) => createNote(context.db, context.scope, input.content)),
 
-  delete: authed.input(z.object({ id: z.uuid() })).handler(async ({ context, input }) => {
-    if (!(await deleteNote(context.db, context.user.id, input.id))) throw new ORPCError("NOT_FOUND");
+  delete: scoped.input(z.object({ id: z.uuid() })).handler(async ({ context, input }) => {
+    if (!(await deleteNote(context.db, context.scope, input.id))) throw new ORPCError("NOT_FOUND");
   }),
 };

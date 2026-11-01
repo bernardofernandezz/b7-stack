@@ -12,6 +12,7 @@ export const Route = createFileRoute("/sign-in")({
 
 function SignIn() {
   const { reset } = Route.useSearch();
+  const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -33,6 +34,8 @@ function SignIn() {
     // Sign-up never starts a session, and an unverified sign-in gets the link again.
     if (mode === "sign-up" || error?.code === "EMAIL_NOT_VERIFIED") return setVerifyEmail(email);
     if (error) return setError(error.message ?? "Something went wrong");
+    // The root route caches the signed-out session; clear it before re-running loaders.
+    queryClient.clear();
     await router.invalidate();
     await navigate({ to: "/" });
   }

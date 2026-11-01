@@ -4,7 +4,7 @@ import { createRootRouteWithContext, HeadContent, Link, Outlet, Scripts, useRout
 import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../components/ui";
-import { client } from "../lib/orpc";
+import { orpc } from "../lib/orpc";
 import { authClient } from "../modules/auth/client";
 import appCss from "../styles.css?url";
 
@@ -17,7 +17,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
-  beforeLoad: async () => ({ session: await client.session() }),
+  // Cached (and filled by SSR), so client navigations make no session request. Sign-in and sign-out clear the cache.
+  beforeLoad: async ({ context }) => ({
+    session: await context.queryClient.ensureQueryData(orpc.session.queryOptions()),
+  }),
   shellComponent: RootDocument,
   component: RootLayout,
 });
@@ -37,11 +40,13 @@ function RootDocument({ children }: { children: ReactNode }) {
 }
 
 function RootLayout() {
-  const { session } = Route.useRouteContext();
+  const { session, queryClient } = Route.useRouteContext();
   const router = useRouter();
 
   async function signOut() {
     await authClient.signOut();
+    // Drops the cached session and the previous user's data.
+    queryClient.clear();
     await router.invalidate();
   }
 

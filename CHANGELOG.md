@@ -14,6 +14,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - The `create-b7` package ships `LICENSE` and has `keywords`, `homepage` and `bugs` (0.3).
 - Password reset in the Fullstack template: `/forgot-password`, `/reset-password`, a reset email, single-use tokens, and every session revoked on reset (3.1).
 - Sign-in requires a verified email address; the verification link signs the user in, and an unverified sign-in re-sends it (3.2).
+- The root route reads the session from the TanStack Query cache, so client navigation makes no session request; sign-in and sign-out clear the cache (3.3).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

@@ -75,10 +75,10 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* [stacks/fullstack/authentication.md › Sign-in methods](stacks/fullstack/authentication.md#sign-in-methods)
   - *Files:* `templates/fullstack/src/modules/auth/`, a reset route under `src/routes/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* Vitest covers token issue and use (email faked as in `test/email.test.ts`), and an E2E resets a password and signs in with it.
-- [x] **3.2 Require email verification when email is configured.**
+- [x] **3.2 Require email verification when email is configured.** (cce01e6)
   - *Files:* `templates/fullstack/src/modules/auth/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* an unverified user cannot sign in (test), and the E2E flow verifies through the logged email link in dev.
-- [ ] **3.3 No session RPC on every client navigation.**
+- [x] **3.3 No session RPC on every client navigation.**
   - *Files:* `templates/fullstack/src/routes/__root.tsx`, `src/lib/orpc.ts`
   - *Done when:* the session is read through TanStack Query with a cache, and an E2E asserts that navigating between two pages makes no `/api/rpc` session request after the first.
 - [x] **3.4 Fail clearly on a query after the per-request pool closes.** (dcd2848) Obsolete with 2.1: the pool now lives for the whole process, so the limitation no longer exists.

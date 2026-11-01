@@ -35,7 +35,10 @@ jobs:
         working-directory: cli
       - run: npm pack
         working-directory: cli
-      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - run: |
+          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
+          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Check generated project
         working-directory: ${{ runner.temp }}/demo-app
@@ -71,7 +74,10 @@ jobs:
         with: { node-version: 26 }
       - run: pnpm install && npm pack
         working-directory: cli
-      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - run: |
+          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
+          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Run the Compose stack and E2E through Caddy
         working-directory: ${{ runner.temp }}/demo-app

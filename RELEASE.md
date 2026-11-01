@@ -40,7 +40,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* [cli/README.md](cli/README.md)
   - *Files:* `cli/index.js`, `cli/test/create.test.js`, `cli/README.md`
   - *Done when:* `node cli/index.js --help` lists every flag and the available templates. `--version` prints `cli/package.json` `version`. When `pnpm` is not on `PATH`, the CLI says how to install it. `pnpm test` in `cli/` covers `--help` and `--version`.
-- [x] **0.3 CLI package metadata.**
+- [x] **0.3 CLI package metadata.** (3401810)
   - *Files:* `cli/package.json`, `cli/scripts/copy-template.js`
   - *Done when:* `npm pack` in `cli/` contains `LICENSE` and `README.md`, and `package.json` has `keywords`, `homepage` and `bugs`.
 
@@ -71,7 +71,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 *Spec for all:* [templates/fullstack/README.md › Known limitations](templates/fullstack/README.md#known-limitations). Each task removes its bullet from that list.
 
-- [ ] **3.1 Password reset.**
+- [x] **3.1 Password reset.**
   - *Spec:* [stacks/fullstack/authentication.md › Sign-in methods](stacks/fullstack/authentication.md#sign-in-methods)
   - *Files:* `templates/fullstack/src/modules/auth/`, a reset route under `src/routes/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* Vitest covers token issue and use (email faked as in `test/email.test.ts`), and an E2E resets a password and signs in with it.

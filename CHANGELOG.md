@@ -12,6 +12,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - CI runs the generated project's Compose stack and E2E through Caddy (2.1).
 - `create-b7 --help` and `--version`; a clear message when pnpm is missing (0.2).
 - The `create-b7` package ships `LICENSE` and has `keywords`, `homepage` and `bugs` (0.3).
+- Password reset in the Fullstack template: `/forgot-password`, `/reset-password`, a reset email, single-use tokens, and every session revoked on reset (3.1).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

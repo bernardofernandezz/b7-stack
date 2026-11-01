@@ -4,7 +4,7 @@ import type { Db } from "../../db/client";
 import * as schema from "../../db/schema";
 import type { AppEnv } from "../../env";
 import { sendEmail } from "../email/send";
-import { verificationEmail } from "../email/templates";
+import { resetPasswordEmail, verificationEmail } from "../email/templates";
 
 type AuthDeps = {
   db: Db;
@@ -20,7 +20,12 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.BETTER_AUTH_URL],
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: {
+      enabled: true,
+      sendResetPassword: ({ user, url }) => sendEmail(env, resetPasswordEmail(user.email, user.name, url)),
+      // A reset ends every existing session, so a stolen session does not survive the password change.
+      revokeSessionsOnPasswordReset: true,
+    },
     emailVerification: {
       sendOnSignUp: true,
       sendVerificationEmail: ({ user, url }) => sendEmail(env, verificationEmail(user.email, user.name, url)),

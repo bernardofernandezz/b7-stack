@@ -1,11 +1,17 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { z } from "zod";
 import { Button, TextField } from "../components/ui";
 import { authClient } from "../modules/auth/client";
 
-export const Route = createFileRoute("/sign-in")({ component: SignIn });
+export const Route = createFileRoute("/sign-in")({
+  // ?reset=true after a password reset, to confirm it worked.
+  validateSearch: z.object({ reset: z.boolean().optional() }),
+  component: SignIn,
+});
 
 function SignIn() {
+  const { reset } = Route.useSearch();
   const router = useRouter();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -31,6 +37,9 @@ function SignIn() {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{mode === "sign-in" ? "Sign in" : "Create an account"}</h1>
+      {reset && mode === "sign-in" && (
+        <p className="text-sm text-green-700">Password changed. Sign in with your new password.</p>
+      )}
       {mode === "sign-up" && <TextField label="Name" name="name" required autoComplete="name" />}
       <TextField label="Email" name="email" type="email" required autoComplete="email" />
       <TextField
@@ -52,6 +61,11 @@ function SignIn() {
       >
         {mode === "sign-in" ? "No account? Sign up" : "Have an account? Sign in"}
       </button>
+      {mode === "sign-in" && (
+        <Link to="/forgot-password" className="text-sm text-zinc-600 underline">
+          Forgot your password?
+        </Link>
+      )}
     </form>
   );
 }

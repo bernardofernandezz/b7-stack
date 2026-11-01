@@ -16,6 +16,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - Sign-in requires a verified email address; the verification link signs the user in, and an unverified sign-in re-sends it (3.2).
 - The root route reads the session from the TanStack Query cache, so client navigation makes no session request; sign-in and sign-out clear the cache (3.3).
 - Documented why Kysely's SQLite dialects stay in the build: they are lazy chunks that never load (3.5).
+- ADR-014: options compose by removing feature regions from a complete template (4.1).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

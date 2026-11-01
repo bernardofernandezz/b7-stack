@@ -76,6 +76,14 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 **Trade-off:** you run a server: OS updates, backups of the `pgdata` volume, and capacity are yours. No edge distribution or scale-to-zero. Horizontal scaling means more `app` replicas behind Caddy, all sharing PostgreSQL (rate limits already live in the database).
 **Rejected:** Nitro's Node preset (still a release candidate at the time of writing). Publishing the app container directly without a proxy (a client could forge `X-Forwarded-For` and bypass rate limits). Keeping Workers as an alternative target (two runtimes double the test matrix).
 
+### ADR-014: Options compose by removing feature regions from a complete template
+**Status:** Proposed.
+**Decision:** `templates/fullstack` has every supported option turned on, and is itself a working, tested project. `templates/fullstack/b7.features.json` lists, per option, the files it owns and the dependencies it adds. In any text file, a feature region is delimited by comment lines `#if <option>` / `#if !<option>` … `#endif` (in `//`, `#` or `{/* */}` comments). `create-b7` removes the files and dependencies of disabled options, keeps or drops each region by its condition, deletes the marker lines, and then refreshes `pnpm-lock.yaml` (`pnpm install`, or `pnpm install --lockfile-only` with `--no-install`). Regions do not nest.
+**Why:** an option such as `organizations` changes existing modules (tenant columns, membership checks), not only adds files. With regions, that change is written once, in place, next to the code it changes. The template in the repository is the largest configuration and runs as is. Every smaller configuration is checked by CI, which generates it and runs its typecheck, tests, build and Compose E2E.
+**Trade-off:** marker comments in the template source, and a lockfile refresh at generation time (network access, or the user runs `pnpm install` before building the image).
+**Rejected:** overlay directories copied over a minimal base, because options that modify a module would duplicate it whole. One template per configuration (combinatorial). A code-generation DSL (more machinery than the six Fullstack options need).
+**Testing an option on its own:** generate the configuration with only that option on, and run the generated project's checks (`.github/workflows/cli.yml` matrix).
+
 ## Other profiles
 
 | ADR | Profile | Decision | Status |

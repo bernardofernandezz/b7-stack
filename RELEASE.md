@@ -82,13 +82,13 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Files:* `templates/fullstack/src/routes/__root.tsx`, `src/lib/orpc.ts`
   - *Done when:* the session is read through TanStack Query with a cache, and an E2E asserts that navigating between two pages makes no `/api/rpc` session request after the first.
 - [x] **3.4 Fail clearly on a query after the per-request pool closes.** (dcd2848) Obsolete with 2.1: the pool now lives for the whole process, so the limitation no longer exists.
-- [x] **3.5 Drop Kysely's unused SQLite dialects from the bundle.** Closed without a code change: on Node.js the dialects are lazy `import()` chunks that never load (about 0.3 MB of a 529 MB image), and aliasing them away could break on Better Auth upgrades.
+- [x] **3.5 Drop Kysely's unused SQLite dialects from the bundle.** (96d915c) Closed without a code change: on Node.js the dialects are lazy `import()` chunks that never load (about 0.3 MB of a 529 MB image), and aliasing them away could break on Better Auth upgrades.
   - *Files:* `templates/fullstack/vite.config.ts`
   - *Done when:* `dist/server` is smaller than before (1.8 MB uncompressed on 2026-11-01), and all checks stay green. If no safe alias exists, mark `[x]` with the reason and leave the limitation.
 
 ## Phase 4: Configurable CLI
 
-- [ ] **4.1 ADR: how options compose into a template.**
+- [x] **4.1 ADR: how options compose into a template.** Decided: [ADR-014](docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template), feature regions removed from a complete template (overlays rejected).
   - *Spec:* [docs/configuration-model.md › Fullstack features](docs/configuration-model.md#fullstack-features-what-each-one-adds), [cli/README.md › Contract](cli/README.md#contract)
   - *Default proposal:* overlay directories `templates/fullstack/+<option>/` copied over the base in a fixed order. `package.json` is deep-merged. `compose.yaml`, `.env.example` and `src/env.ts` are patched at marked insertion points. Overlays are excluded when the base is used as a template.
   - *Files:* `docs/technology-decisions.md`

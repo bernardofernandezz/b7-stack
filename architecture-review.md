@@ -1,7 +1,7 @@
 # B7 Stack: Architecture Review (v0.2 refinement)
 
 **Date:** 2026-10-31 (all sources accessed on this date)
-**Supersedes:** the v0.1 review (in git history, commit `9816a4d`).
+**Supersedes:** the v0.1 review (in git history: commit `9816a4d`, refined in `bfc9355`).
 **Scope:** narrow B7 Fullstack to the smallest production-feasible architecture, re-verify every critical claim, and define what blocks the first reference implementation.
 **Nothing here is executable evidence.** Items marked VERIFIED are confirmed by vendor documentation only. **No part of B7 is production-ready until the acceptance tests below pass against a deployed Worker.**
 

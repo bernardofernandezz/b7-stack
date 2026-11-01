@@ -31,6 +31,8 @@
   },
   "files": [
     "index.js",
+    "config.js",
+    "regions.js",
     "template"
   ],
   "engines": {

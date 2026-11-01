@@ -88,12 +88,12 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 4: Configurable CLI
 
-- [x] **4.1 ADR: how options compose into a template.** Decided: [ADR-014](docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template), feature regions removed from a complete template (overlays rejected).
+- [x] **4.1 ADR: how options compose into a template.** (f2d65e2) Decided: [ADR-014](docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template), feature regions removed from a complete template (overlays rejected).
   - *Spec:* [docs/configuration-model.md › Fullstack features](docs/configuration-model.md#fullstack-features-what-each-one-adds), [cli/README.md › Contract](cli/README.md#contract)
   - *Default proposal:* overlay directories `templates/fullstack/+<option>/` copied over the base in a fixed order. `package.json` is deep-merged. `compose.yaml`, `.env.example` and `src/env.ts` are patched at marked insertion points. Overlays are excluded when the base is used as a template.
   - *Files:* `docs/technology-decisions.md`
   - *Done when:* the ADR states the mechanism, the rejected alternatives, and how one overlay is tested on its own.
-- [ ] **4.2 Configuration schema and rules.** needs: 4.1
+- [x] **4.2 Configuration schema and rules.** needs: 4.1. Plain JS validation in `cli/config.js` (no Zod dependency for six options), regions in `cli/regions.js`, options in `templates/fullstack/b7.features.json`.
   - *Spec:* [docs/configuration-model.md › Rules](docs/configuration-model.md#rules) (rules 1–4 for Fullstack)
   - *Files:* `cli/` (schema, validation), `cli/test/`
   - *Done when:* one test per rule, and a violation exits non-zero with the rule number in the message. The template `b7.json` validates.

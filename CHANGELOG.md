@@ -17,6 +17,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - The root route reads the session from the TanStack Query cache, so client navigation makes no session request; sign-in and sign-out clear the cache (3.3).
 - Documented why Kysely's SQLite dialects stay in the build: they are lazy chunks that never load (3.5).
 - ADR-014: options compose by removing feature regions from a complete template (4.1).
+- `create-b7` validates configurations against rules 1–4 (errors name the rule) and applies feature regions; templates declare their options in `b7.features.json` (4.2).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

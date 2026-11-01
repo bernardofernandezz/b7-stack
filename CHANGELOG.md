@@ -7,6 +7,14 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.2.0-preview.0] - 2026-11-01
+
+### Added
 - Release checklist (`RELEASE.md`) and this changelog.
 - Docker target for B7 Fullstack: a multi-target `Dockerfile` (`migrate`, `runtime`), `compose.yaml` (`postgres` → `migrate` → `app` → `caddy`) and a `Caddyfile` with automatic HTTPS for a public `APP_URL` (2.1).
 - CI runs the generated project's Compose stack and E2E through Caddy (2.1).
@@ -24,6 +32,11 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - `create-b7 --billing stripe`: Stripe Checkout and customer portal, a verified webhook route with an inbox, per-subscription row locks and state fetched from Stripe, derived entitlements (the free plan keeps 20 notes), and a `scheduler` service that runs reconciliation daily through `/api/internal/reconcile` (5.2).
 - `scripts/load.ts` for the D-T2 load check; BA-T2 and D-T2 pass on two replicas (5.4b).
 - The CI matrix covers configuration 2 (organizations + email + Stripe) and each option on its own (4.4).
+- `create-b7` CLI preview: `npm create b7 my-app`, with `--template`/`-t`, `--yes`, `--no-install` and `--no-git`. It generates `.dev.vars` with a `BETTER_AUTH_SECRET`, runs `git init` and `pnpm install`.
+- Templates are discovered from `templates/`, and each carries its own `b7.json`.
+- `templates/fullstack`: B7 Fullstack reference implementation (TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Drizzle + Hyperdrive, Tailwind + Base UI + Lucide, Workers, Resend), with a provider-neutral billing contract. Tested locally only.
+- CI workflow that packs the CLI, generates a project and runs its typecheck, lint, tests, build and E2E.
+- `ROADMAP.md` with risk-ordered milestones.
 
 ### Changed
 - Decisions A1–A11 and A13 approved; the docs no longer mark them "proposed" (1.1, 1.2).
@@ -33,24 +46,13 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - `create-b7` writes `.env` (with generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`) instead of `.dev.vars` (2.1).
 - Auth rate limiting reads the client IP from `X-Forwarded-For`, which only Caddy sets; the origin check is explicitly on, so tests exercise it (2.1).
 - Architecture review: Workers-only tests marked obsolete, new Compose tests C-T1…C-T3, release blockers updated (2.1).
+- Architecture review v0.2: TanStack Start server routes own all HTTP (Hono removed from Fullstack), oRPC is the only app transport, PostgreSQL only, one cache-disabled Hyperdrive binding, Stripe is the billing reference and AbacatePay is EXPERIMENTAL, billing uses state sync with an inbox and row lock. These decisions are proposed, pending maintainer approval.
+- Configuration model reduced to a profile plus profile-specific options.
 
 ### Fixed
 - `create-b7` installs with `--no-frozen-lockfile` (under `CI=true`, pnpm refused the stale lockfile of a smaller configuration) and exits with code 1 when setup fails.
 - CI resolves the packed tarball path before `npm exec`.
 - Caddy now load-balances `app` replicas through Docker DNS; before, `--scale app=N` sent every request to one replica (5.4b).
-
-## [0.2.0-preview.0] - not yet published
-
-### Added
-- `create-b7` CLI preview: `npm create b7 my-app`, with `--template`/`-t`, `--yes`, `--no-install` and `--no-git`. It generates `.dev.vars` with a `BETTER_AUTH_SECRET`, runs `git init` and `pnpm install`.
-- Templates are discovered from `templates/`, and each carries its own `b7.json`.
-- `templates/fullstack`: B7 Fullstack reference implementation (TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Drizzle + Hyperdrive, Tailwind + Base UI + Lucide, Workers, Resend), with a provider-neutral billing contract. Tested locally only.
-- CI workflow that packs the CLI, generates a project and runs its typecheck, lint, tests, build and E2E.
-- `ROADMAP.md` with risk-ordered milestones.
-
-### Changed
-- Architecture review v0.2: TanStack Start server routes own all HTTP (Hono removed from Fullstack), oRPC is the only app transport, PostgreSQL only, one cache-disabled Hyperdrive binding, Stripe is the billing reference and AbacatePay is EXPERIMENTAL, billing uses state sync with an inbox and row lock. These decisions are proposed, pending maintainer approval.
-- Configuration model reduced to a profile plus profile-specific options.
 
 ## [0.1.0] - 2026-10-31
 

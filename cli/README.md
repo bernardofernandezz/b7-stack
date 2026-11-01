@@ -1,8 +1,8 @@
 # create-b7 (preview)
 
 ```sh
-npm create b7@latest my-app                                  # asks for the template and its options
-npm create b7@latest my-app -- -t fullstack --email none     # or: pnpm create b7 my-app -t fullstack --email none
+npm create b7@preview my-app                                  # asks for the template and its options
+npm create b7@preview my-app -- -t fullstack --email none     # or: pnpm create b7 my-app -t fullstack --email none
 ```
 
 Copies a template from [`templates/`](../templates), including its `b7.json` (the configuration it implements), creates `.env` with a generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, runs `git init` and `pnpm install` (when pnpm is missing it says how to install it, since Node.js 25+ no longer ships corepack).

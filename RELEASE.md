@@ -34,7 +34,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 0: Hygiene
 
-- [~] **0.1 HUMAN: run CI for the first time.** Authorized 2026-11-01; waiting for the CI result. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
+- [x] **0.1 HUMAN: run CI for the first time.** PR #1: after two CI fixes (tarball glob, frozen lockfile under `CI=true`), all 10 jobs green on `d6a54d7`. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
   - *Done when:* the `create-b7` workflow is green. Any failure becomes a new task below this one.
 - [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.** (2fd87a0)
   - *Spec:* [cli/README.md](cli/README.md)
@@ -63,7 +63,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
-- [~] **2.4 HUMAN: publish the preview.** blocked: needs npm credentials and 0.1. needs: 0.1, 0.2, 0.3, 2.1
+- [x] **2.4 HUMAN: publish the preview.** Authorized by the maintainer, 2026-11-01. needs: 0.1, 0.2, 0.3, 2.1
   - `cd cli && npm publish --tag preview` at version `0.2.0-preview.0`, then `git tag v0.2.0-preview.0`.
   - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
 

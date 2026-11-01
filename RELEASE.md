@@ -63,7 +63,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
-- [x] **2.4 HUMAN: publish the preview.** Authorized by the maintainer, 2026-11-01. needs: 0.1, 0.2, 0.3, 2.1
+- [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: npm requires a 2FA code (run `cd cli && npm publish --tag preview --otp=<code>`). needs: 0.1, 0.2, 0.3, 2.1
   - `cd cli && npm publish --tag preview` at version `0.2.0-preview.0`, then `git tag v0.2.0-preview.0`.
   - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
 

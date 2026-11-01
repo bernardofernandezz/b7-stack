@@ -49,7 +49,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [~] **1.1 HUMAN: approve or reject A1–A11 and A13.** blocked: maintainer decision.
   - *Spec:* [architecture-review.md › Decisions requiring maintainer approval](architecture-review.md#decisions-requiring-maintainer-approval)
   - *Done when:* each decision is marked approved or rejected in that table.
-- [ ] **1.2 Remove "proposed" from the approved decisions.** needs: 1.1
+- [~] **1.2 Remove "proposed" from the approved decisions.** blocked: waits for 1.1. needs: 1.1
   - *Files:* every doc that `grep -rli proposed --include=*.md .` lists (README, configuration model, technology decisions, `stacks/fullstack/*`, `ROADMAP.md`, the review). For a rejected decision, restore the earlier text from git history.
   - *Done when:* the grep only matches decisions still pending (none, if all were decided), and M0 in `ROADMAP.md` is marked done.
 
@@ -61,7 +61,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Done when:* C-T1 and C-T2 pass for the template and for a project generated from the packed CLI.
 - [~] **2.2 HUMAN: a public host.** blocked: needs a server and a domain. A server with Docker, a domain pointing at it, ports 80 and 443 open. Copy a generated project there, set `APP_URL=https://<domain>` in `.env`, run `docker compose up -d --build`.
   - *Done when:* the site answers over HTTPS with a valid certificate.
-- [ ] **2.3 Run C-T3 against the public host.** needs: 2.2
+- [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
 - [~] **2.4 HUMAN: publish the preview.** blocked: needs npm credentials and 0.1. needs: 0.1, 0.2, 0.3, 2.1
   - `cd cli && npm publish --tag preview` at version `0.2.0-preview.0`, then `git tag v0.2.0-preview.0`.
@@ -100,7 +100,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [x] **4.3 Option flags and prompts.** (4d26280) needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
   - *Files:* `cli/index.js`, `cli/README.md`, `cli/test/`
   - *Done when:* `--organizations`, `--billing <stripe|none>` and `--email <resend|none>` exist with matching prompts. Only options with a tested overlay are offered. The generated `b7.json` records the resolved configuration, including derived values.
-- [x] **4.4 CI matrix over representative configurations.** needs: 4.3. The matrix runs configuration 1 (`--email none`), the default, each option alone, and configuration 2 (`--organizations --billing stripe`).
+- [x] **4.4 CI matrix over representative configurations.** (11f84ea) needs: 4.3. Verified locally 2026-11-01: all six configurations generate, typecheck, lint, test, run in Compose and pass E2E. The matrix runs configuration 1 (`--email none`), the default, each option alone, and configuration 2 (`--organizations --billing stripe`).
   - *Spec:* [docs/configuration-model.md › Representative configurations](docs/configuration-model.md#representative-configurations)
   - *Files:* `.github/workflows/cli.yml`
   - *Done when:* CI generates configurations 1 and 2 (once their overlays exist) and runs each project's checks.
@@ -116,17 +116,17 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Files:* `templates/fullstack/+billing-stripe/` (adapter implementing `BillingProvider` in `src/modules/billing/`, tables and migration, `src/routes/api/webhooks/stripe.ts`, reconciliation in `src/jobs/`, a `scheduler` Compose service)
   - *Done when:* S-T1 and B-T1…B-T6 pass locally (Stripe faked at the HTTP boundary), and the generated project's checks pass.
 - [~] **5.3 HUMAN: Stripe test-mode keys and a webhook endpoint** blocked: needs a Stripe account and 2.2. on the public host. needs: 2.2, 5.2
-- [ ] **5.4 Deployed billing and load tests.** needs: 5.3
+- [~] **5.4 Deployed billing and load tests.** blocked: waits for 5.3. needs: 5.3
   - *Spec:* S-T2, S-T3, B-T4 in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Done when:* each has a result against the public host in Verification status.
-- [x] **5.4b Replica and load tests on the Compose stack (agent, local).** BA-T2 passed on 2 replicas; D-T2 passed (30,000 requests, connections flat at 3). Found and fixed: Caddy resolved `app` once and sent every request to one replica; it now uses Docker DNS upstreams with round-robin.
+- [x] **5.4b Replica and load tests on the Compose stack (agent, local).** (2725df4) BA-T2 passed on 2 replicas; D-T2 passed (30,000 requests, connections flat at 3). Found and fixed: Caddy resolved `app` once and sent every request to one replica; it now uses Docker DNS upstreams with round-robin.
   - *Spec:* BA-T2 with `docker compose up --scale app=2`, and D-T2 (sustained load, for example 50 RPS for 10 min) in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Files:* a load script under `templates/fullstack/scripts/`, Verification status
   - *Done when:* rate limits hold across both replicas, and PostgreSQL connections (`pg_stat_activity`) stay flat under load.
 - [~] **5.5 HUMAN: send a real email through Resend** blocked: needs a Resend key and a verified domain. from a verified domain (sign-up verification and an organization invitation).
-- [ ] **5.6 Declare production-ready.** needs: every task above
+- [~] **5.6 Declare production-ready.** blocked: waits for 1.1, 2.2, 5.3 and 5.5. needs: every task above
   - *Done when:* release blockers 1–5 and 7 are all met, the "Preview" notices in the root README, the template README and `cli/README.md` are replaced, and M1–M4 in `ROADMAP.md` are marked done.
-- [ ] **5.7 HUMAN: publish 1.0.0.** needs: 5.6
+- [~] **5.7 HUMAN: publish 1.0.0.** blocked: waits for 5.6. needs: 5.6
   - Bump `cli/package.json` to `1.0.0`, `npm publish`, `git tag v1.0.0`. *Then the agent* closes the `## [1.0.0]` section in `CHANGELOG.md`.
 
 ---

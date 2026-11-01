@@ -4,7 +4,7 @@
 
 Every deployed service must answer three questions: *Is it up? Is it slow? What failed and for whom?*
 
-- **Structured logs.** JSON with a request ID, route, status and duration. Add `userId` and `organizationId` when they are known. Never log secrets, tokens, full payment payloads or PII beyond IDs.
+- **Structured logs.** JSON with a request ID, route, status and duration. Add `userId` and `organizationId` when they are known. Never log secrets, tokens, full payment payloads or PII beyond IDs. Redact secrets carried in URLs, such as AbacatePay's `webhookSecret` query parameter, from request logs, traces and error reports.
 - **Errors** are captured with stack traces and request context.
 - **Traces** cover external calls: database, payment providers, email.
 

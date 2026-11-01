@@ -1,68 +1,95 @@
-# Authentication, Organizations and Authorization
+# Authentication, Authorization and Tenant Isolation (v0.2, proposed)
 
-B7 Fullstack uses [Better Auth](https://www.better-auth.com/). Auth data lives in your own PostgreSQL (or D1) database through the Drizzle adapter. With `auth = none`, nothing on this page is installed.
+Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](../../architecture-review.md).
 
-## Setup on Workers
+## Mounting and runtime
 
-- **Compatibility flag.** Better Auth uses `AsyncLocalStorage`, so `wrangler.jsonc` needs `"compatibility_flags": ["nodejs_compat"]`. Hyperdrive's `pg` driver needs the same flag ([Better Auth + Hono](https://www.better-auth.com/docs/integrations/hono)).
-- **Mounting.** Better Auth handles Web-standard requests, so no adapter is needed. Inside the Hono app (base path `/api`):
+| Item | Rule | Evidence |
+|------|------|----------|
+| Route | `src/routes/api/auth/$.ts`, with `GET` and `POST` handlers returning `context.auth.handler(request)` | [Better Auth installation, TanStack Start](https://www.better-auth.com/docs/installation) |
+| Runtime flag | `compatibility_flags: ["nodejs_compat"]` (Better Auth uses `AsyncLocalStorage`) | [Better Auth installation](https://www.better-auth.com/docs/installation), [Better Auth + Hono](https://www.better-auth.com/docs/integrations/hono) |
+| Cookies from server-side auth calls | Not needed, because B7 performs sign-in, sign-up and sign-out only through `/api/auth/*` from the browser. If a server-side flow must set auth cookies, add the `tanstackStartCookies` plugin as the **last** plugin | [Better Auth + TanStack](https://www.better-auth.com/docs/integrations/tanstack) |
+| Database adapter | Drizzle adapter, `provider: "pg"`, with the request's Drizzle instance | [Better Auth Drizzle adapter](https://www.better-auth.com/docs/adapters/drizzle) |
+| Schema | Generate the Better Auth tables with the Better Auth CLI (the `auth` package; `@better-auth/cli` is deprecated), commit them into the Drizzle schema, and migrate with Drizzle Kit | same |
+| Background tasks | `advanced.backgroundTasks.handler` is set to Workers `waitUntil`, so deferred work such as the verification email is not cut off after the response | Better Auth `advanced.backgroundTasks` option |
+| Base URL | Set `baseURL` explicitly (from `BETTER_AUTH_URL`) | [Better Auth options](https://better-auth.com/docs/reference/options) |
 
-  ```ts
-  app.on(["GET", "POST"], "/auth/*", (c) => getAuth(c.env).handler(c.req.raw));
-  ```
+**Doc inconsistency (resolved).** The installation page imports the Drizzle adapter from `better-auth/adapters/drizzle`, while the adapter page imports it from `@better-auth/drizzle-adapter`. In `better-auth` 1.7 both resolve, and `better-auth/adapters/drizzle` re-exports the bundled adapter, so the reference implementation uses it and adds no dependency.
 
-  The full path `/api/auth/*` matches Better Auth's default `basePath`.
-- **Instance per request.** On Workers, the database client comes from request-scoped bindings (`env.HYPERDRIVE`), so B7 builds the auth instance with a factory, `getAuth(env)`, that creates the Drizzle client and returns `betterAuth({...})`.
-  **Uncertain:** official Better Auth docs do not prescribe the instance-per-request pattern on Workers. Check its cost and behavior (for example, rate-limit storage and plugin init) against current docs before v1.
-- **Schema.** Generate the Better Auth tables with its CLI into the Drizzle schema, and merge them with the application schema in `src/db/schema.ts`. Migrations run through Drizzle Kit.
-- **Environment.** `BETTER_AUTH_SECRET` *(secret)*, `BETTER_AUTH_URL` (the public origin). Set `trustedOrigins` explicitly.
-- **Session in API code.** A Hono middleware calls `auth.api.getSession({ headers: c.req.raw.headers })` and puts the result on the context. The oRPC context is built from it. See [architecture](architecture.md#tenant-isolation).
-- **Session in Start code.** Server functions and loaders call the same `getSession` using the incoming request headers.
+## Instance lifecycle
 
-## Methods
+- `createAuth({ db, env })` builds a Better Auth instance **per request** inside the request middleware, and stores it on the request context. The reason: the database client is request-scoped (see [architecture](architecture.md#database-client-lifecycle)), and Better Auth's own Workers example constructs the instance inside `fetch` ([Better Auth 1.5 release, 2026-02-28](https://better-auth.com/blog/1-5)).
+- That example is not an explicit endorsement of per-request instances. **UNVERIFIED:** the CPU cost of construction (test `BA-T1`).
+- Plugins and access-control statements are defined at module scope (they are pure configuration), and only the database and secrets are injected per request.
 
-### Email and password
-Enabled by default. Email verification and password reset need `email = resend` (or another `sendEmail()` implementation). Without email, verification is disabled and the CLI warns.
+## Sessions and cookies
 
-### OAuth
-Optional. Each provider adds `<PROVIDER>_CLIENT_ID` and `<PROVIDER>_CLIENT_SECRET` and a callback URL under `/api/auth/callback/<provider>`. Configure only the providers you use.
+| Setting | B7 default | Reason |
+|---------|-----------|--------|
+| Session storage | Database (PostgreSQL) | Single source of truth, no extra service |
+| `session.cookieCache` | **Disabled** (`A6`) | When enabled, revocation (sign-out, ban, removal) is not seen until the cache expires ([session management](https://www.better-auth.com/docs/concepts/session-management)). Enable it only as a measured optimization with `maxAge` ≤ 5 min, and document the window |
+| `secondaryStorage` | **DEFERRED** | It would need KV, which is eventually consistent and offers no atomic increment |
+| Expiry | Better Auth defaults (`expiresIn` 7 days, refreshed per `updateAge`) | Documented defaults |
+| Cookie attributes | Better Auth defaults (`HttpOnly`, `Secure`) | See [security standard](../../docs/standards/security.md#sessions-and-authentication) |
+| Fresh session | Better Auth `freshAge` (1 day) for sensitive actions | Documented default |
 
-### Passkeys
-Optional, through Better Auth's passkey plugin (WebAuthn). Offer them as an addition to another sign-in method, not as the only one, unless your users are known to have passkey-capable devices.
+Cost: `GET /get-session` refreshes sessions with database writes, and without the cookie cache, every authenticated request reads the session from PostgreSQL ([session management](https://www.better-auth.com/docs/concepts/session-management)). That is accepted for correctness.
 
-### Sessions
-Better Auth manages sessions with database-backed records and cookies. Cookie attributes and CSRF rules are in [security](../../docs/standards/security.md#sessions-and-authentication).
+## Rate limiting
 
-## Authorization
-
-`authorization = roles` (the default) uses Better Auth's access control: define resources and actions, then build roles from them.
+Configuration ([Better Auth rate limit](https://www.better-auth.com/docs/concepts/rate-limit)):
 
 ```ts
-import { createAccessControl } from "better-auth/plugins/access";
-
-const statement = { project: ["create", "update", "delete"], billing: ["manage"] } as const;
-export const ac = createAccessControl(statement);
-export const member = ac.newRole({ project: ["create"] });
-export const admin  = ac.newRole({ project: ["create", "update", "delete"], billing: ["manage"] });
+rateLimit: { enabled: true, storage: "database" },
+advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
 ```
 
-**Uncertain:** confirm the `createAccessControl` import path against your Better Auth version. The docs show the API, and the import path has moved between versions.
+- The default memory storage is unsuitable for serverless, per Better Auth's docs.
+- Rate limiting is disabled in development by default. Enable it in staging so it gets tested (test `BA-T2`).
+- Rate limiting for **non-auth** endpoints is **DEFERRED**. Use Cloudflare WAF rate-limiting rules at the edge if it is needed before B7 defines an in-app mechanism.
 
-Check permissions **on the server**, in oRPC middleware or the service layer, with `auth.api.hasPermission(...)`. The client-side checks are for UI only.
+## Sign-in methods
 
-## Organizations and multi-tenancy
+| Method | Status | Notes |
+|--------|--------|-------|
+| Email + password | CORE | Hashing CPU cost on the Workers Free plan is **UNVERIFIED** (test `W-1`, decision `A12`) |
+| Email verification and password reset | DERIVED: enabled when `email = resend` | Without email, verification is off, and the CLI warns |
+| OAuth providers | OPTIONAL (per provider) | `<PROVIDER>_CLIENT_ID` and `<PROVIDER>_CLIENT_SECRET` |
+| Passkeys | **EXPERIMENTAL** (`A10`) | Not part of the first reference implementation |
 
-`authorization = organizations` adds Better Auth's `organization` plugin:
+## Authorization model
 
-- **Organizations and memberships.** The default roles are `owner` (full control), `admin` (everything except deleting the org or transferring ownership) and `member` (read). Custom roles come from the same access-control statements as above.
-- **Invitations.** The plugin requires a `sendInvitationEmail` callback. B7 implements it with `sendEmail()` from the email module.
-- **Active organization.** The session stores `activeOrganizationId`. Clients switch organization with `organization.setActive`. Server code reads the active organization **only from the session**.
-- **Teams.** Optional sub-groups (`teams.enabled`). Off by default.
-- **Data isolation** is B7's responsibility, not the plugin's. Follow the [tenant isolation rules](architecture.md#tenant-isolation).
+Authorization runs **only on the server, in oRPC middleware, before any service call**. Client-side checks are for UI only.
 
-**Billing per organization.** When organizations are enabled, the billing customer is the **organization**, not the user. See [billing](billing.md#entitlements).
+### Without organizations
 
-## Uncertainties to verify
+There are user-level procedures only. `requireSession` loads the session through `context.auth.api.getSession({ headers })`. Global admin roles are **DEFERRED**.
 
-- Better Auth organization plugin on **D1**: there is no documented production guidance yet. Test it before you recommend it.
-- Rate-limit storage on Workers: memory storage is per-isolate, so use database or KV storage. Confirm the supported options in the current docs.
+### With organizations (OPTIONAL)
+
+Uses the Better Auth `organization` plugin ([docs](https://www.better-auth.com/docs/plugins/organization)): organizations, members, invitations, and the default roles `owner`, `admin` and `member`. **Teams and dynamic roles are DEFERRED.**
+
+Every org-scoped procedure runs this chain. Nothing in it trusts client-supplied organization IDs, roles or permissions:
+
+1. **`requireSession`** loads the session. No session gives `UNAUTHORIZED`.
+2. **`requireMembership`** reads `organizationId` from `session.activeOrganizationId`, **never from input**. If it is `null` (the default for new sessions), it fails with `NO_ACTIVE_ORGANIZATION`. It then loads the `member` row `WHERE organization_id = $org AND user_id = $user` from PostgreSQL (uncached binding). If there is no row, it fails with `FORBIDDEN`. **The active organization ID alone never proves membership.** A user removed from an org keeps a stale `activeOrganizationId` until it is changed.
+3. **`requirePermission(statement)`** checks the **role from the freshly loaded member row** against B7's access-control statements (`createAccessControl` from `better-auth/plugins/access`). Using `auth.api.hasPermission` instead is allowed only after test `M-T4` confirms it scopes to the active org and re-checks membership. Its docs do not state either.
+4. The procedure receives `{ userId, organizationId, role }` from middleware context and passes `organizationId` explicitly to services.
+
+Procedures that act on a specific resource load that resource **with** `organization_id = ctx.organizationId` in the `WHERE` clause. A resource ID belonging to another organization therefore produces `NOT_FOUND`, not a leak.
+
+Initial active organization: optionally set it in the `databaseHooks.session.create.before` hook to the user's most recent membership. That is a convenience only, and step 2 still applies.
+
+Invitations require the plugin's `sendInvitationEmail` callback, so **organizations ⇒ email** is a hard rule (see the [configuration model](../../docs/configuration-model.md#rules)).
+
+## Tenant isolation
+
+- Every tenant-owned table has `organization_id NOT NULL` and an index that leads with it.
+- Service functions take `organizationId` as a parameter and include it in every `SELECT`, `UPDATE` and `DELETE`, and in every insert.
+- There are no "global" queries over tenant tables outside explicitly named admin or maintenance code paths.
+- R2 keys (if storage is selected) use the prefix `org/<organizationId>/`. Presigned URLs are short-lived.
+- **Row-level security is OPTIONAL defense in depth, not the primary control.** With Hyperdrive, it requires every request's queries to run in a transaction that sets `set_config('app.org_id', $1, true)` ([how Hyperdrive works](https://developers.cloudflare.com/hyperdrive/concepts/how-hyperdrive-works/)). That holds a pooled connection per request, which Cloudflare discourages for scaling.
+
+## Acceptance tests
+
+`BA-T1`, `BA-T2`, `W-1`, `H-T1` (revocation is immediate), `H-T2` (removed member is rejected), `M-T1`–`M-T4`. Definitions are in [architecture-review.md](../../architecture-review.md#required-acceptance-tests).

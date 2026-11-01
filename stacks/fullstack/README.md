@@ -1,57 +1,30 @@
-# B7 Fullstack: the SaaS and startup profile
+# B7 Fullstack: the SaaS and startup profile (v0.2, proposed)
 
-**Purpose:** a plug-and-play foundation for building, launching and scaling SaaS products. It is the most opinionated B7 profile: **TypeScript only**, one Cloudflare Worker, and a modular monolith inside it.
+**Purpose:** a production-oriented foundation for SaaS products. This is the most opinionated B7 profile: **TypeScript only** (Go is never offered), **one Cloudflare Worker**, **one PostgreSQL database**, and a modular monolith inside it.
 
-Go is **not** offered in this profile. If a product later needs a Go service, it adds a separate [B7 API](../api/README.md) project. See the [scaling](architecture.md#scaling-without-microservices) section.
+> v0.2 narrows v0.1. Hono, D1, KV, Durable Objects and backend-strategy choices are removed from this profile. See [architecture-review.md](../../architecture-review.md#decisions-requiring-maintainer-approval) for the decisions awaiting approval.
 
-## Core stack
+## Core
 
-| Layer | Technology |
-|-------|-----------|
-| Application | React, TanStack Start, TanStack Router, TanStack Query |
-| Backend | Hono, oRPC, Zod |
-| Runtime and deployment | Cloudflare Workers, Wrangler. Bun for local tooling and packages |
-| Authentication | Better Auth |
-| Database | PostgreSQL + Drizzle (`pg` driver) through Cloudflare Hyperdrive. D1 is an alternative |
-| UI | Tailwind CSS, Base UI, Lucide |
-| Testing | Vitest (Workers pool), Playwright |
-| Monitoring | Cloudflare Workers Observability. Sentry is optional |
+| Layer | Technology | Owner of |
+|-------|-----------|----------|
+| App and HTTP | TanStack Start, TanStack Router | SSR, page routing, `/api/*` server routes, request middleware |
+| App RPC | oRPC + Zod | Typed browser ↔ server calls, in-process SSR calls, optional OpenAPI |
+| Auth | Better Auth | Users, sessions, rate-limited auth endpoints, optional organizations |
+| Data | PostgreSQL, Drizzle, `pg`, Hyperdrive (caching disabled) | Persistence |
+| UI | Tailwind CSS, Base UI, Lucide | Presentation |
+| Runtime | Cloudflare Workers, Wrangler. pnpm locally | Deployment |
+| Quality | Vitest (Workers pool), Playwright, Workers Observability, GitHub Actions | Testing, monitoring, CI/CD |
 
-## Backend strategies
+## Options
 
-Pick one. The default is `hono-orpc-with-start`. The full definitions are in the [configuration model](../../docs/configuration-model.md#fullstack-backend-strategies).
+`organizations`, `oauthProviders`, `billing` (Stripe, or AbacatePay *experimental*), `email` (Resend), `storage` (R2), `queues`, `publicApi`, `turnstile`, `sentry`, and `passkeys` *(experimental)*. Dependencies, env vars and rules for each are in the [configuration model](../../docs/configuration-model.md#b7-fullstack).
 
-| Strategy | Use when |
-|----------|----------|
-| `start-server` | Internal app with no public API, webhooks or billing |
-| `hono-orpc` | All server logic behind typed procedures and REST |
-| `hono-orpc-with-start` (default) | Procedures and REST in Hono, plus Start server functions for page-level loading |
+## Documents
 
-## Features: default versus optional
-
-| Capability | Status | Technology | Doc |
-|-----------|--------|-----------|-----|
-| Authentication | Default (can be disabled) | Better Auth: email/password, sessions | [authentication](authentication.md) |
-| OAuth providers | Optional | Better Auth social providers | [authentication](authentication.md#oauth) |
-| Passkeys | Optional | Better Auth passkey plugin | [authentication](authentication.md#passkeys) |
-| Roles and permissions | Default | Better Auth access control | [authentication](authentication.md#authorization) |
-| Organizations, memberships, invitations | Optional | Better Auth organization plugin | [authentication](authentication.md#organizations-and-multi-tenancy) |
-| Billing and payments | Optional (pick **one**) | Stripe **or** AbacatePay | [billing](billing.md) |
-| Transactional email | Optional | Resend, replaceable | [infrastructure](infrastructure.md#email) |
-| File storage | Optional | Cloudflare R2 | [infrastructure](infrastructure.md#r2-storage) |
-| Background jobs | Optional | Cloudflare Queues | [infrastructure](infrastructure.md#queues-and-cron) |
-| Scheduled tasks | Optional | Cron Triggers | [infrastructure](infrastructure.md#queues-and-cron) |
-| Caching / KV | Optional | Cloudflare KV | [infrastructure](infrastructure.md#bindings) |
-| Realtime / coordination | Optional, only when justified | Durable Objects | [infrastructure](infrastructure.md#bindings) |
-| Bot protection | Optional | Turnstile | [infrastructure](infrastructure.md#bindings) |
-| Public API docs | Optional | oRPC OpenAPI | [architecture](architecture.md#responsibilities) |
-| Error tracking | Optional | Sentry | [observability](../../docs/standards/observability.md) |
-
-A simple SaaS uses auth, roles, PostgreSQL and nothing else. Every other row adds its own dependencies only when selected.
-
-## Documents in this profile
-
-- [architecture.md](architecture.md): request flow, responsibilities, module layout, tenant isolation, scaling.
-- [authentication.md](authentication.md): Better Auth, organizations, authorization.
-- [billing.md](billing.md): provider abstraction, webhooks, entitlements.
-- [infrastructure.md](infrastructure.md): Workers, bindings, local development, secrets, deployment.
+| Document | Canonical for |
+|----------|---------------|
+| [architecture.md](architecture.md) | Component ownership, request flow, DB client lifecycle, module layout, scaling |
+| [authentication.md](authentication.md) | Better Auth lifecycle, sessions, rate limiting, authorization chain, tenant isolation |
+| [billing.md](billing.md) | Billing domain, provider mappings and limitations, webhook verification, event processing |
+| [infrastructure.md](infrastructure.md) | Wrangler, plans and limits, local development, secrets, deployment |

@@ -4,7 +4,7 @@
 
 ## Configuration
 
-Intelligence choices live here rather than in the shared [configuration model](../../docs/configuration-model.md). The shared dimensions that apply are `language = python`, `database`, `infrastructure.target = docker`, `testing = pytest`, and `backendStrategy` (`none` for training and research, `standalone` for an inference service).
+Intelligence choices live here rather than in the shared [configuration model](../../docs/configuration-model.md). The only option in the shared model is `serving` (`none` for training and research, `http` for an inference service). Python, Docker and pytest are core.
 
 | Concern | Default | Options |
 |---------|---------|---------|

@@ -6,17 +6,17 @@
 
 | Concern | Default |
 |---------|---------|
-| Language / tooling | TypeScript, Bun |
+| Language / tooling | TypeScript, Node.js (LTS), pnpm |
 | Framework | React, TanStack Start, TanStack Router |
 | Server logic | TanStack Start server functions and server routes |
 | Server state | TanStack Query, when route loaders are not enough |
 | UI | Tailwind CSS, Base UI, Lucide |
 | Testing | Vitest |
-| Deployment | Docker on Bun. Cloudflare Workers is optional |
+| Deployment | Docker on Node.js. Cloudflare Workers is optional |
 
 ## Options
 
-Database (PostgreSQL, D1, SQLite with Drizzle), Better Auth with roles, Resend, Playwright, Workers deployment with KV, R2 and Turnstile, Sentry and OpenTelemetry. Valid values and their dependencies are in the [configuration model](../../docs/configuration-model.md#allowed-values-per-profile).
+Deployment target (Docker or Workers) and database (PostgreSQL + Drizzle + `pg`, through a cache-disabled Hyperdrive binding on Workers). Authentication is deferred in Web, so use B7 Fullstack when you need users. Valid values are in the [configuration model](../../docs/configuration-model.md#other-profiles).
 
 ## Server logic without an API service
 
@@ -24,5 +24,5 @@ TanStack Start server functions run on the server and can be called from compone
 
 ## When to choose another profile
 
-- You need a public API, third-party webhooks, organizations or billing: use **[B7 Fullstack](../fullstack/README.md)**.
+- You need users, a public API, third-party webhooks, organizations or billing: use **[B7 Fullstack](../fullstack/README.md)**.
 - The backend must be deployed or versioned independently, or written in Go: add a **[B7 API](../api/README.md)** project.

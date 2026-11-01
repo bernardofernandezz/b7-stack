@@ -1,128 +1,91 @@
-# Technology Decisions
+# Technology Decisions (v0.2, proposed)
 
-Each entry gives the reason for the choice, the alternatives considered, and the trade-off we accept. The status of each technology (default, optional or alternative) is set in the [README pillars table](../README.md#the-seven-pillars). Valid combinations are defined in the [configuration model](configuration-model.md).
+These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged since v0.1), `Proposed` (changed in v0.2 and pending approval, decision ID in brackets), or `Rejected`. Detailed evidence and the verification status of every claim are in [architecture-review.md](../architecture-review.md). Allowed combinations are defined in [configuration-model.md](configuration-model.md).
 
-## Languages & Runtime
+## B7 Fullstack
 
-### TypeScript
-**Why:** types that run from database to UI in one language, and the largest ecosystem for web work.
-**Trade-off:** types disappear at runtime, so every boundary still needs schema validation (Zod).
+### ADR-001: TypeScript only, with pnpm as local tooling
+**Status:** Accepted.
+**Decision:** Fullstack uses TypeScript exclusively. pnpm is used for installs and scripts (Node.js runs the tooling), and production runs on the Workers runtime.
+**Why:** one language from schema to UI. pnpm's strict `node_modules`, its build-script allowlist and its minimum release age reduce supply-chain risk, and it is the package manager with the widest CI and tooling support.
+**Rejected:** Go in Fullstack, because it would mean two languages in one deployable unit. Go services belong in B7 API.
 
-### Bun
-**Why:** a fast package manager, test runner and runtime in one tool, with Web-standard APIs that match the Workers runtime.
-**Alternatives:** Node.js with pnpm. Fully supported as a runtime when a dependency needs Node-specific behavior.
-**Trade-off:** Bun's Node compatibility is broad but not complete. On Workers, Bun is only the local tool (install, scripts). Production runs the Workers runtime, not Bun.
+### ADR-002: TanStack Start owns all HTTP routing, and Hono is removed from Fullstack [A1]
+**Status:** Proposed.
+**Decision:** use TanStack Start server routes for `/api/*` (auth, RPC, OpenAPI, webhooks) and Start request middleware for request scope. Do not run Hono inside the Fullstack Worker.
+**Why:** every integration B7 needs is documented **against Start directly**: Better Auth mounts at `src/routes/api/auth/$.ts` ([Better Auth installation](https://www.better-auth.com/docs/installation)), oRPC mounts at `src/routes/api/rpc.$.ts` ([oRPC adapter](https://orpc.dev/docs/adapters/tanstack-start)), and Start provides server routes, global request middleware and `createCsrfMiddleware` ([Start middleware](https://tanstack.com/start/latest/docs/framework/react/guide/middleware)). No vendor documents a Start + Hono single-Worker composition, which would add a second router, a custom dispatcher and an undocumented `handler.fetch` call path.
+**Trade-off:** Hono's middleware ecosystem is lost in Fullstack, and B7 writes a few small middlewares itself (request scope, membership). Start is younger than Hono, so its server-route APIs may change.
+**Rejected:** (a) a Start + Hono dispatcher in `src/server.ts`, because it is undocumented as a composition and has two routers. (b) Hono mounted in a Start splat route, because Hono becomes a router inside a router with no capability B7 needs.
 
-### Go
-**Why:** a single static binary, excellent concurrency, and a strong standard library (`net/http`, `database/sql`, `testing`). It is the default for Systems and an option for API.
-**Trade-off:** types are not shared with a TypeScript frontend. Use OpenAPI to generate clients when that matters.
+### ADR-003: oRPC is the only application transport [A2]
+**Status:** Proposed.
+**Decision:** all browser ↔ server calls are oRPC procedures. SSR calls them in-process through `createRouterClient`. Start server functions are not used for business logic.
+**Why:** one validation, error and middleware model. An optional public REST API comes from the same router (`OpenAPIHandler`) without a second transport. oRPC documents the isomorphic client and in-process SSR client for Start ([oRPC adapter](https://orpc.dev/docs/adapters/tanstack-start)).
+**Trade-off:** one dependency more than server functions alone, and loaders call procedures instead of plain functions.
+**Rejected:** Start server functions only, because adding a public API later would introduce a second transport. tRPC, because it has no first-class OpenAPI.
 
-### Python
-**Why:** the ML ecosystem (PyTorch, scikit-learn, Hugging Face) has no real substitute. Kept to the Intelligence profile.
+### ADR-004: Better Auth is core, with database sessions and no cookie cache [A5, A6]
+**Status:** Proposed.
+**Decision:** every Fullstack project includes Better Auth (email + password). Organizations are optional. Sessions live in PostgreSQL, and the cookie cache is disabled by default.
+**Why:** self-hosted, with data in your own database and documented TanStack Start and Workers usage. A disabled cookie cache makes revocation immediate ([session management](https://www.better-auth.com/docs/concepts/session-management)).
+**Trade-off:** one database read per authenticated request. You maintain the auth tables and keep up with security updates yourself.
+**Rejected:** Clerk and Auth0 (hosted, paid at scale, user data off-platform). A secondary-storage session store on KV (eventually consistent).
 
-## Frontend
+### ADR-005: PostgreSQL, Drizzle and `pg`, through one cache-disabled Hyperdrive binding [A3, A4]
+**Status:** Proposed. The driver choice is Accepted.
+**Decision:** PostgreSQL is the only Fullstack database. Use Drizzle with node-postgres `pg` ≥ 8.16.3, and one `pg` client per request. The single Hyperdrive binding is created with caching disabled.
+**Why:** Cloudflare documents that Drizzle + Postgres.js over Hyperdrive is not supported ([Hyperdrive + Drizzle](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/)), and it lists `pg` 8.16.3 as the minimum ([node-postgres](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/)). Hyperdrive's cache is on by default and **not invalidated by writes**. Cloudflare itself recommends a cache-disabled configuration for authentication, permissions and billing reads ([query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)).
+**Trade-off:** no free query caching. A second cache-enabled binding is deferred until it is measured to be needed.
+**Rejected:** D1 in Fullstack, because a second database model doubles the testing matrix. Prisma (heavier, with a generation step). Postgres.js with Drizzle on Hyperdrive (unsupported).
 
-### React + TanStack Start + TanStack Router
-**Why:** type-safe file-based routing, SSR and streaming, and server functions without a separate API process. Start officially supports Cloudflare Workers through `@cloudflare/vite-plugin` ([Cloudflare guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/)).
-**Alternatives:** Next.js. It is mature and widely used, but its feature set is tied to its own server model and Vercel-optimized defaults, and B7 wants routing and data loading that stay framework-explicit and portable to Workers. React Router (framework mode) is a reasonable alternative that B7 does not curate.
-**Trade-off:** Start is younger than Next.js. Expect API changes, and follow the official docs closely.
+### ADR-006: Billing uses Stripe as the reference, AbacatePay as experimental, and state sync instead of event replay [A7, A8]
+**Status:** Proposed.
+**Decision:** a small billing domain with one adapter per provider. Webhooks only trigger a sync: state always comes from a provider API fetch, under a per-subscription row lock, with a transactional inbox for dedup. Entitlements are derived on read. The outbox is deferred.
+**Why:** Stripe does not guarantee event order and says not to order by `created` ([Stripe webhooks](https://docs.stripe.com/webhooks)). AbacatePay events have no timestamps, its subscription status is only `PENDING`/`ACTIVE`/`CANCELLED`, it has no period-end field, and its payload fields are undocumented ([AbacatePay subscriptions](https://docs.abacatepay.com/pages/subscriptions/reference), [webhooks](https://docs.abacatepay.com/pages/webhooks)). See [billing](../stacks/fullstack/billing.md).
+**Trade-off:** one provider API call per webhook, and a transaction held across that call.
+**Rejected:** a generic payment framework. The Better Auth Stripe plugin (it would put two billing paths in one product). Event-sourced state from webhook payloads.
 
-### TanStack Query
-**Why:** handles server-state caching, retries and invalidation, and has first-class oRPC integration (`@orpc/tanstack-query`). Optional: route loaders are often enough.
+### ADR-007: Cloudflare Workers as the only Fullstack target
+**Status:** Accepted.
+**Decision:** one Worker, deployed with Wrangler from GitHub Actions.
+**Why:** no servers to manage, bindings for Hyperdrive, R2, Queues and Cron, and a Free plan that covers Hyperdrive and Queues ([Hyperdrive pricing](https://developers.cloudflare.com/hyperdrive/platform/pricing/), [Queues pricing](https://developers.cloudflare.com/queues/platform/pricing/)).
+**Trade-off (lock-in):** bindings, Wrangler config and the module export shape are Cloudflare-specific. Application code stays on Web standards (`Request`, `fetch`, Web Crypto), so moving to containers means swapping bindings for network clients. The Free plan's 10 ms CPU limit may not fit password hashing ([limits](https://developers.cloudflare.com/workers/platform/limits/)). That is unverified [A12].
 
-## Backend
+### ADR-008: Optional Cloudflare services only when a feature needs them, with KV and Durable Objects deferred [A9, A10]
+**Status:** Proposed.
+**Decision:** R2 (storage), Queues (queues) and Turnstile are opt-in. Cron is derived from billing. KV and Durable Objects are not offered in v0.2.
+**Why:** no core feature needs KV or DOs, and KV's eventual consistency makes it unsafe for auth, rate limits and billing.
 
-### Hono
-**Why:** a small router built on Web standards (`Request`/`Response`) that runs unchanged on Workers, Bun and Node. Better Auth and oRPC both mount into it without adapters.
-**Alternatives:** Elysia (Bun-centric, so a weaker fit for Workers), Express and Fastify (Node-centric).
+### ADR-009: Tailwind CSS, Base UI and Lucide
+**Status:** Accepted. Utility CSS with no runtime, unstyled accessible primitives, and tree-shakable icons. Base UI publishes as `@base-ui/react` (the earlier package name is deprecated on npm).
+**Rejected:** component libraries with their own theme runtime.
 
-### oRPC
-**Why:** end-to-end type-safe procedures with Zod validation, typed errors and **built-in OpenAPI generation**. That gives one contract for both internal clients and public REST docs. It integrates with Hono through its Fetch adapter and has an official TanStack Start integration.
-**Alternatives:** tRPC (no first-class OpenAPI), ts-rest (contract-first and more verbose).
-**Trade-off:** a smaller community than tRPC.
+### ADR-010: Vitest (Workers pool), Playwright, and a mandatory post-deploy smoke test
+**Status:** Accepted, with an amendment: the smoke test is mandatory because the Vitest Workers pool injects `nodejs_compat` ([Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)).
 
-### Go `net/http`
-**Why:** routing in the standard library (method and path patterns) covers most APIs with zero dependencies.
-**Alternatives:** chi or echo, when middleware ecosystems justify them.
+### ADR-011: Resend for email behind a single `sendEmail()`
+**Status:** Accepted. Resend documents Workers support. B7 uses `html`/`text`, not the Node-only `react` option ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)).
 
-### OpenAPI
-**Why:** the lingua franca for public APIs and client generation. Used only for public REST surfaces, never as a requirement for internal calls.
+### ADR-012: Observability with Workers Observability by default and Sentry optional
+**Status:** Accepted. OpenTelemetry export is deferred in Fullstack.
 
-## Data
+## Other profiles
 
-### PostgreSQL
-**Why:** a reliable relational default with strong constraints, transactions and JSON support, and many managed hosts (including free tiers). No vendor lock-in.
+| ADR | Profile | Decision | Status |
+|-----|---------|----------|--------|
+| ADR-020 | API (TS) | Hono + oRPC (Fetch adapter, [docs](https://orpc.dev/docs/adapters/hono)) + Zod on Node.js or Workers | Proposed: runtime changed from Bun (ADR-026) |
+| ADR-021 | API (Go) | `net/http` + SQLC + pgx, `log/slog` | Accepted |
+| ADR-022 | API | Auth deferred until B7 defines a token model [A11] | Proposed |
+| ADR-023 | Web | TanStack Start with server functions and server routes. Auth deferred (use Fullstack) [A11] | Proposed |
+| ADR-024 | Systems | Go, single binary, optional SQLite through `database/sql` | Accepted |
+| ADR-025 | Intelligence | Python, PyTorch, scikit-learn, Hugging Face, ONNX Runtime for serving | Accepted |
+| ADR-026 | Web, API (TS) | Node.js (current LTS) is the server runtime outside Workers, and pnpm is the package manager (ADR-001). **Why:** the longest production track record, full npm compatibility, and first-class support from hosts, OpenTelemetry and Sentry. **Trade-off:** slower startup and installs than Bun. **Alternative:** Bun, supported but not the default | Proposed |
 
-### Drizzle
-**Why:** SQL-shaped, type-safe queries with no code generation step, and it runs on Workers. Supports PostgreSQL, D1 and SQLite.
-**Constraint:** over Hyperdrive, use the `pg` (node-postgres) driver. Cloudflare documents that Postgres.js with Drizzle over Hyperdrive is not supported ([Hyperdrive + Drizzle](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/)).
-**Alternatives:** Prisma, which is heavier and needs a generation step plus edge-specific setup. Kysely, a query builder without schema-as-code.
+## Rejected alternatives (all profiles)
 
-### SQLC
-**Why:** for Go, you write SQL and get type-safe code. No ORM runtime.
-
-### SQLite and Cloudflare D1
-**Why:** SQLite for local, embedded and CLI persistence. D1 for Workers apps whose data fits a single SQLite database.
-**Trade-off:** D1 is Cloudflare-only. Moving off it means migrating data and drivers.
-
-### Redis
-**Status:** not a configuration option. Add it only with a documented reason, such as rate limiting or pub/sub across container replicas. On Workers, Cloudflare KV, Durable Objects and Queues cover the usual Redis use cases.
-
-## UI & Design
-
-### Tailwind CSS
-**Why:** utility-first styling with no runtime cost. Design tokens live in CSS.
-
-### Base UI
-**Why:** unstyled, accessible React primitives that pair with Tailwind without fighting a theme system.
-**Alternatives:** Radix UI (similar scope), shadcn/ui (copy-paste components built on these primitives; compatible with the B7 UI choices).
-
-### Lucide
-**Why:** a consistent, tree-shakable icon set.
-
-## Infrastructure
-
-### Cloudflare Workers
-**Why:** global deployment without servers to manage, a generous free tier, and integrated services (Hyperdrive, D1, R2, Queues, Cron, KV, Durable Objects, Turnstile) reached through bindings with no network credentials to manage.
-**Trade-off (lock-in):** bindings, the server entry shape and Wrangler config are Cloudflare-specific. B7 limits this by keeping application logic on Web standards (Hono, `fetch`, Web Crypto) and keeping bindings in the infrastructure and module layers. A move to containers means swapping bindings for network clients (for example, R2 to S3, Queues to a broker, Hyperdrive to a direct pool). Workers also impose runtime limits; see [fullstack infrastructure](../stacks/fullstack/infrastructure.md#workers-runtime-constraints).
-
-### Docker / Docker Compose
-**Why:** the portable deployment unit for non-Workers profiles. Compose runs local dependencies such as PostgreSQL.
-
-### GitHub Actions
-**Why:** CI/CD next to the code, with official Wrangler deploy support.
-
-### OpenTelemetry
-**Why:** vendor-neutral traces and metrics for container deployments. On Workers, use Workers Observability first.
-
-## Authentication & SaaS services
-
-### Better Auth
-**Why:** a self-hosted TypeScript auth library that stores data in your own database through Drizzle. It provides email/password, OAuth, passkeys, organizations, invitations and access control as plugins. It runs on Workers with `nodejs_compat`.
-**Alternatives:** Clerk or Auth0 (hosted, paid at scale, user data off-platform), Lucia (deprecated as a library).
-**Trade-off:** you operate auth tables and security updates yourself.
-
-### Stripe
-**Why:** the international default, with a mature subscription model (trials, proration, dunning, customer portal).
-**Trade-off:** paid per transaction. The subscription model is rich, and B7 maps only what the billing module needs.
-
-### AbacatePay
-**Why:** Brazilian payments (PIX, cards) with a simple API and subscription webhooks (API v2).
-**Trade-off:** a smaller feature surface than Stripe. Capability gaps are listed in [billing](../stacks/fullstack/billing.md#provider-capabilities).
-
-### Resend
-**Why:** a simple transactional email API that is Workers-compatible ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)).
-**Replaceability:** all sending goes through one function, `sendEmail()`, so changing provider changes one file.
-
-### Sentry
-**Why:** optional error tracking with an official Cloudflare SDK. Not required, because Workers Observability covers logs and traces without it.
-
-## Testing
-
-### Vitest and Playwright
-**Why:** Vitest shares Vite config with TanStack Start and runs inside the Workers runtime with `@cloudflare/vitest-pool-workers`. Playwright handles cross-browser E2E tests.
-
-## Intelligence
-
-### PyTorch, scikit-learn, ONNX Runtime, Hugging Face
-**Why:** PyTorch for deep learning, scikit-learn for classical ML, Hugging Face for pretrained models and datasets, and ONNX Runtime to serve exported models fast and in other languages.
+| Alternative | Reason |
+|-------------|--------|
+| Next.js | Its server model and defaults are tied to its own platform assumptions. B7 prefers TanStack Start's explicit routing and documented Workers deployment |
+| Redis | Not offered. Use PostgreSQL first. On containers, add it by hand only with a documented reason |
+| Elysia, Express, Fastify | Bun-centric or Node-centric. Hono covers B7 API on every target |
+| SQLite (TS) and D1 | Deferred everywhere in v0.2 to keep one data model per language |

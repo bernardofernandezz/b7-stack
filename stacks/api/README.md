@@ -9,15 +9,16 @@
 | Router | Hono | — |
 | Procedures | oRPC + Zod, mounted inside Hono | — |
 | Public REST | oRPC `OpenAPIHandler` and generated OpenAPI spec | Plain Hono routes |
-| Runtime | Bun | Cloudflare Workers |
-| Data | none | PostgreSQL / D1 / SQLite with Drizzle |
-| Auth | none | Better Auth (roles) |
+| Runtime | Node.js (LTS), via `@hono/node-server` | Cloudflare Workers; Bun (alternative) |
+| Data | none | PostgreSQL with Drizzle + `pg` (Hyperdrive, caching disabled, on Workers) |
+| Auth | Deferred in v0.2 | — |
 | Testing | Vitest (`app.request()`) | — |
 | Deploy | Docker | Workers |
 
 **Hono + oRPC is the recommended combination.** oRPC is served through its Fetch adapter inside a Hono middleware, with no separate package ([oRPC Hono adapter](https://orpc.dev/docs/adapters/hono)):
 
 ```ts
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { RPCHandler } from "@orpc/server/fetch";
 import { router } from "./router";
@@ -31,8 +32,10 @@ app.use("/rpc/*", async (c, next) => {
   await next();
 });
 
-export default app;
+serve(app); // Node.js. On Workers, `export default app` instead.
 ```
+
+`@hono/node-server` is the only Node-specific piece. It is not used on the Workers target ([Hono on Node.js](https://hono.dev/docs/getting-started/nodejs)).
 
 If earlier middleware reads the request body, oRPC fails with "body already used". Either do not consume the body before the oRPC middleware, or apply the proxy workaround from the oRPC docs.
 
@@ -41,17 +44,17 @@ If earlier middleware reads the request body, oRPC fails with "body already used
 | Concern | Default | Options |
 |---------|---------|---------|
 | Router | Standard library `net/http` (`ServeMux` method and path patterns) | — |
-| Data | none | PostgreSQL with SQLC + pgx; SQLite with `database/sql` |
+| Data | none | PostgreSQL with SQLC + pgx |
 | Public REST | OpenAPI spec maintained alongside handlers | — |
 | Logging | `log/slog` | — |
 | Testing | `go test`, `httptest` | — |
 | Deploy | Docker or a single binary | — |
 
-Drizzle, oRPC and Better Auth are TypeScript-only and are not available in the Go track. For auth in Go, validate tokens issued by an identity provider or by a B7 Fullstack app. **Uncertain:** B7 does not yet curate a Go auth library.
+Drizzle and oRPC are TypeScript-only and are not available in the Go track. Auth is **deferred** in both API tracks until B7 defines a token model ([ADR-022](../../docs/technology-decisions.md#other-profiles)).
 
 ## Compatibility
 
-All valid combinations are in the [configuration model](../../docs/configuration-model.md#compatibility-rules). The main constraints: Go requires SQLC or `database/sql`, Cloudflare bindings require the Workers target, and the Workers target requires TypeScript.
+Valid options are in the [configuration model](../../docs/configuration-model.md#other-profiles). Go uses SQLC for PostgreSQL. The Workers target is TypeScript-only.
 
 ## When to choose another profile
 

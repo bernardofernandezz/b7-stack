@@ -4,7 +4,9 @@ B7 is an opinionated, modular ecosystem for building modern software. It is a se
 
 B7 tries to make good architectural decisions easy, without hiding complexity behind new abstractions. It follows the spirit of [T3 Stack](https://create.t3.gg/) but covers more than one kind of project: web apps, APIs, system tools, machine learning and SaaS products.
 
-> Status: **v0.1, documentation-first.** No generator or runnable templates exist yet. The [configuration model](docs/configuration-model.md) is the contract the future `create-b7` CLI will implement. See [cli/](cli/README.md).
+> Status: **v0.2 (proposed).** The B7 Fullstack reference implementation lives in [templates/fullstack](templates/fullstack/README.md). It runs locally and builds for Workers, but it is **not production-ready** until the [release blockers](architecture-review.md#release-blockers) pass on a deployed Worker. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
+>
+> Earlier status: **v0.1, documentation-first.** No generator or runnable templates exist yet. The [configuration model](docs/configuration-model.md) is the contract the future `create-b7` CLI will implement. See [cli/](cli/README.md).
 
 ## Principles
 
@@ -17,12 +19,12 @@ Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional
 
 | # | Pillar | Default | Optional | Alternative |
 |---|--------|---------|----------|-------------|
-| 1 | Languages & Runtime | TypeScript, Bun | Go, Python | Node.js runtime |
+| 1 | Languages & Runtime | TypeScript, Node.js (LTS), pnpm | Go, Python | Bun runtime |
 | 2 | Frontend | React, TanStack Start, TanStack Router | TanStack Query | — |
-| 3 | Backend | Hono + oRPC (TS), `net/http` (Go), TanStack Start server functions | OpenAPI | — |
-| 4 | Data | PostgreSQL, Drizzle (TS), SQLC (Go) | SQLite, Cloudflare D1, Redis (when justified) | — |
+| 3 | Backend | TanStack Start server routes + oRPC (Fullstack), Hono + oRPC (API, TS), `net/http` (Go) | OpenAPI | — |
+| 4 | Data | PostgreSQL, Drizzle + `pg` (TS), SQLC (Go), Hyperdrive on Workers | SQLite (Go) | D1 and Redis: deferred |
 | 5 | UI & Design | Tailwind CSS, Base UI, Lucide | — | — |
-| 6 | Infrastructure | Cloudflare Workers, Docker, GitHub Actions, Linux | Docker Compose, Cloudflare services, OpenTelemetry | — |
+| 6 | Infrastructure | Cloudflare Workers, Docker, GitHub Actions, Linux | Docker Compose, R2, Queues, Cron, Turnstile, OpenTelemetry | KV, Durable Objects: deferred |
 | 7 | Intelligence | Python, PyTorch, scikit-learn | ONNX Runtime, Hugging Face | — |
 
 ## The five profiles
@@ -31,11 +33,11 @@ A profile is a starting point with its own defaults and compatibility rules. It 
 
 | Profile | For | Core | Docs |
 |---------|-----|------|------|
-| **B7 Web** | React web apps, including SSR apps with integrated server logic | TanStack Start, Tailwind, Base UI, Bun | [stacks/web](stacks/web/README.md) |
+| **B7 Web** | React web apps, including SSR apps with integrated server logic | TanStack Start, Tailwind, Base UI, Node.js | [stacks/web](stacks/web/README.md) |
 | **B7 API** | Standalone APIs, services, integrations | TypeScript (Hono + oRPC + Zod) **or** Go (`net/http` + SQLC) | [stacks/api](stacks/api/README.md) |
 | **B7 Systems** | CLIs, networking, automation, dev tools | Go, SQLite when needed | [stacks/systems](stacks/systems/README.md) |
 | **B7 Intelligence** | ML, AI, data processing, scientific computing | Python, PyTorch, scikit-learn, ONNX Runtime | [stacks/intelligence](stacks/intelligence/README.md) |
-| **B7 Fullstack** | SaaS products and startups | TanStack Start + Hono + oRPC on Cloudflare Workers, Better Auth, PostgreSQL + Drizzle + Hyperdrive. TypeScript only. | [stacks/fullstack](stacks/fullstack/README.md) |
+| **B7 Fullstack** | SaaS products and startups | TanStack Start + oRPC in one Cloudflare Worker, Better Auth, PostgreSQL + Drizzle + Hyperdrive. TypeScript only. | [stacks/fullstack](stacks/fullstack/README.md) |
 
 ## How configuration works
 
@@ -44,7 +46,7 @@ A project is a **profile** plus a set of independent **choices**: language, back
 - has a default per profile, or is off by default,
 - installs **only** its own dependencies and configuration (choosing Stripe never installs AbacatePay, and choosing no auth never installs Better Auth),
 - declares the environment variables and external services it needs,
-- may require or exclude other choices (for example, billing requires a database, and B7 Fullstack never offers Go).
+- may require other choices (for example, organizations require email), and values that can be inferred are derived rather than chosen. B7 Fullstack never offers Go.
 
 The full model, the allowed values per profile and example configurations are in [docs/configuration-model.md](docs/configuration-model.md).
 
@@ -59,6 +61,9 @@ The full model, the allowed values per profile and example configurations are in
 | Why each technology was chosen | [docs/technology-decisions.md](docs/technology-decisions.md) |
 | Engineering standards | [code quality](docs/standards/code-quality.md) · [security](docs/standards/security.md) · [testing](docs/standards/testing.md) · [observability](docs/standards/observability.md) |
 | SaaS profile in depth | [stacks/fullstack/](stacks/fullstack/README.md) |
+| Fullstack reference implementation | [templates/fullstack/](templates/fullstack/README.md) |
+| Architecture review, tests and blockers | [architecture-review.md](architecture-review.md) |
+| Milestones | [ROADMAP.md](ROADMAP.md) |
 | Future generator | [cli/README.md](cli/README.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 

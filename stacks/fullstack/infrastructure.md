@@ -1,105 +1,82 @@
-# B7 Fullstack Infrastructure
+# B7 Fullstack Infrastructure (v0.2, proposed)
 
-The deployment target is fixed to **Cloudflare Workers**. Everything else on this page is optional and generated only when selected. The lock-in trade-off is documented in [technology decisions](../../docs/technology-decisions.md#cloudflare-workers).
+The smallest viable deployment is **one Worker, one PostgreSQL database, one Hyperdrive binding (caching disabled) and one migration workflow**. Every other Cloudflare service is added only by a selected feature (see the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds)). The Cloudflare lock-in trade-off is in [technology decisions](../../docs/technology-decisions.md#adr-007-cloudflare-workers-as-the-only-fullstack-target).
 
-## Build and config
+## Build and Wrangler config
 
-TanStack Start builds for Workers through `@cloudflare/vite-plugin` ([Cloudflare guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/)):
-
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), tanstackStart(), react()],
-});
-```
+TanStack Start builds for Workers with `@cloudflare/vite-plugin` (`viteEnvironment: { name: "ssr" }`), per the [Cloudflare guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/) and [Start hosting](https://tanstack.com/start/latest/docs/framework/react/guide/hosting).
 
 ```jsonc
-// wrangler.jsonc: only the selected sections are generated
+// wrangler.jsonc: shape only; sections appear only for selected features
 {
   "name": "my-saas",
-  "main": "src/server.ts",                  // custom entry, see architecture.md
-  "compatibility_date": "<date of project creation>",
-  "compatibility_flags": ["nodejs_compat"], // Better Auth (AsyncLocalStorage), pg driver
+  "main": "@tanstack/react-start/server-entry",   // "src/server.ts" when cron or queues exist
+  "compatibility_date": "<project creation date>",   // must not be newer than the installed workerd supports
+  "compatibility_flags": ["nodejs_compat"],        // explicit, even where the date enables it by default
   "observability": { "enabled": true },
-
-  "hyperdrive":      [{ "binding": "HYPERDRIVE", "id": "<id>" }],
-  "r2_buckets":      [{ "binding": "BUCKET", "bucket_name": "my-saas-uploads" }],
-  "queues": {
-    "producers": [{ "binding": "JOBS", "queue": "my-saas-jobs" }],
-    "consumers": [{ "queue": "my-saas-jobs", "dead_letter_queue": "my-saas-jobs-dlq" }]
-  },
-  "triggers":        { "crons": ["0 3 * * *"] },
-  "kv_namespaces":   [{ "binding": "KV", "id": "<id>" }]
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<created with --caching-disabled>" }]
+  // billing:  "triggers": { "crons": ["0 3 * * *"] }
+  // storage:  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "my-saas-uploads" }]
+  // queues:   "queues": { "producers": [...], "consumers": [{ ..., "dead_letter_queue": "..." }] }
 }
 ```
 
-Run `wrangler types` to generate the `Env` type from this file. Keep the import path of the TanStack Start Vite plugin aligned with your installed version.
+- Create the Hyperdrive configuration with `wrangler hyperdrive create … --caching-disabled` ([query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)).
+- **Custom entry** (`src/server.ts`, only with cron or queues). This follows Cloudflare's documented shape and nothing else:
+  ```ts
+  import handler from "@tanstack/react-start/server-entry";
+  export default { fetch: handler.fetch, scheduled, queue };
+  ```
+  There is no path dispatch here. All HTTP routing is Start's (see [architecture](architecture.md#responsibilities)).
 
-## Bindings
+## Plans and quotas (as of 2026-10-31)
 
-| Binding | Use for | Avoid for |
-|---------|---------|-----------|
-| **Hyperdrive** | Pooled, cached connections to PostgreSQL from Workers. Use the `pg` driver | — |
-| **D1** | Small, SQLite-shaped data, per-tenant databases, prototypes | Large or write-heavy relational workloads |
-| **R2** | User uploads, exports, generated files. Serve through signed or authorized routes | Data you need to query |
-| **Queues** | Emails, webhook follow-ups, exports, anything retryable | Work the user is waiting on |
-| **Cron Triggers** | Nightly billing reconciliation, cleanup, digests | Sub-minute scheduling |
-| **KV** | Read-heavy, eventually consistent caches and config | Counters, anything that needs strong consistency |
-| **Durable Objects** | Realtime rooms, per-tenant coordination, strongly consistent counters | General storage (only when justified) |
-| **Turnstile** | Bot protection on sign-up, sign-in and public forms. Verify the token on the server | — |
+| Service | Free plan | Source |
+|---------|-----------|--------|
+| Workers CPU | **10 ms** per request (Paid: 30 s default, 5 min max) | [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) |
+| Simultaneous outbound connections | 6 per invocation (both plans) | same |
+| Cron / queue consumer duration | 15 min wall time | same |
+| Hyperdrive | Included. 100,000 queries/day on Free | [Hyperdrive pricing](https://developers.cloudflare.com/hyperdrive/platform/pricing/) |
+| Queues | Included. 10,000 operations/day on Free, 24 h retention | [Queues pricing](https://developers.cloudflare.com/queues/platform/pricing/) |
+
+Whether the **Free plan's 10 ms CPU** fits Better Auth password hashing is **UNVERIFIED** (test `W-1`, decision `A12`). Until it is measured, B7 does not claim Fullstack runs on the Free plan.
 
 ## Workers runtime constraints
 
-- **No filesystem** for application data. Use R2, D1 or PostgreSQL.
-- **Node APIs only through `nodejs_compat`**, and only the subset Cloudflare supports ([Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)). Check every new dependency, and prefer libraries built on Web standards.
-- **Limits** on CPU time, memory and bundle size per request and plan. Check the current [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) for your plan, and move heavy work to Queues.
-- **No shared state between requests.** Isolates are reused unpredictably. Do not cache DB clients or per-user data in module scope.
-- **Bindings are request-scoped.** Read them from `env` (Hono `c.env`, or `import { env } from "cloudflare:workers"` in Start code).
+- There is no filesystem for application data. Node APIs are available only through `nodejs_compat` ([Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)).
+- Nothing request-scoped (DB clients, auth instances, user data) lives at module scope.
+- Bindings come from `import { env } from "cloudflare:workers"`.
+- The Vitest Workers pool injects `nodejs_compat` automatically, so tests can pass while a deploy fails ([Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)). A **post-deploy smoke test is mandatory**.
 
 ## Local development
 
-- Start everything with `bun run dev` (Vite with the Cloudflare plugin). It runs the Workers runtime locally with local emulation of D1, R2, KV, Queues and Durable Objects.
-- **PostgreSQL:** run it with Docker Compose. Hyperdrive connects directly in local mode through `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (preferred), or through `localConnectionString` in Wrangler config. Pooling and caching are off locally ([Hyperdrive local dev](https://developers.cloudflare.com/hyperdrive/configuration/local-development/)).
-- **Cron:** trigger it locally with `curl "http://localhost:<port>/cdn-cgi/local/scheduled?cron=0+3+*+*+*"`.
-- **Webhooks:** use `stripe listen --forward-to` for Stripe. For AbacatePay, use a tunnel (for example `cloudflared tunnel`) to a dev webhook.
+- `pnpm run dev` runs Vite with the Cloudflare plugin, which uses the Workers runtime locally.
+- PostgreSQL runs in Docker Compose. Hyperdrive connects directly in local dev through `localConnectionString` on the binding (the reference implementation) or `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`, with no pooling or caching ([Hyperdrive local dev](https://developers.cloudflare.com/hyperdrive/configuration/local-development/)). Hyperdrive-specific behavior (pooling, transaction mode) is therefore tested **only against a deployed Worker**.
+- Cron: `curl "http://localhost:<port>/cdn-cgi/local/scheduled?cron=0+3+*+*+*"`.
+- Webhooks: `stripe listen --forward-to localhost:<port>/api/webhooks/stripe`. For AbacatePay, use dev mode plus a tunnel.
 
 ## Secrets
 
-- Local: `.dev.vars` (gitignored). Commit `.dev.vars.example` with names only.
-- Production: `wrangler secret put <NAME>`. Secrets are bindings on `env`, like any other.
-- CI: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub environment secrets.
-- The full list of variables per feature is in the [configuration model](../../docs/configuration-model.md#features).
+- Local: `.dev.vars` (gitignored), with `.dev.vars.example` committed.
+- Production: `wrangler secret put`. CI: GitHub environment secrets.
+- The variables for each feature are listed in the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds).
 
-## Email
+## Optional services
 
-`src/modules/email/send.ts` exports `sendEmail({ to, subject, html, text })`, the only place that calls the provider. With Resend, it uses `RESEND_API_KEY` and `EMAIL_FROM` from a verified domain, and checks both `data` and `error` in the response. Resend documents Workers support ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)). To change provider, replace this one file.
+| Feature | Rule |
+|---------|------|
+| **Email (Resend)** | `modules/email/send.ts` is the only caller of the provider. It uses `html`/`text` (the `react` option is documented as Node-only). It checks both `data` and `error` ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)). When queues are enabled, send from a consumer |
+| **R2** | Uploads go through an authorized route with size and type checks, or through short-lived presigned URLs. Keys use `org/<organizationId>/…` |
+| **Queues** | Small JSON messages carrying IDs. Consumers re-read state and are idempotent. Configure `max_retries` and a dead-letter queue |
+| **Turnstile** | Verify the token on the server for sign-up, password reset and public forms |
 
-Send email from a Queue consumer when queues are enabled, so provider outages do not fail user requests.
-
-## R2 storage
-
-- Uploads go through an authorized API route (size and type checked), or through presigned URLs when uploads are large.
-- Object keys are tenant-prefixed: `org/<organizationId>/...`. The authorization check runs before every read.
-
-## Queues and cron
-
-- Messages are small JSON with a `type` and IDs. Load the current state from the database inside the consumer.
-- Consumers are idempotent, just like webhooks. Configure `max_retries` and a dead-letter queue.
-- `queue` and `scheduled` handlers are exported from the same `src/server.ts` as `fetch`. See [architecture](architecture.md#server-entry).
-
-## Deployment
+## Deployment workflow
 
 ```
-GitHub Actions
-  on PR:   bun install → typecheck → lint → vitest → build
-  on main: same → drizzle-kit migrate (DATABASE_URL secret) → wrangler deploy → Playwright smoke test against the deployed URL
+PR:    pnpm install → typecheck → lint → vitest (workers pool) → build
+main:  same → drizzle-kit migrate (DATABASE_URL) → wrangler deploy → Playwright smoke test against the deployed URL
 ```
 
-- Run migrations **before** deploy, and keep them backward-compatible (expand, then contract), because the old and new Worker versions briefly serve traffic at the same time.
-- Use Wrangler environments (`--env staging`) for a staging Worker with its own bindings and secrets.
-- Roll back with `wrangler rollback` for code. Database rollbacks are forward fixes.
+- Migrations are expand-then-contract, because old and new Worker versions overlap briefly during a deploy.
+- Use a staging Worker (Wrangler environment) with its own Hyperdrive, database and secrets.
+- Roll back with `wrangler rollback`. Database changes are fixed forward.

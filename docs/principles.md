@@ -11,7 +11,7 @@ Each principle comes with the decision rules it leads to. When two options are o
 
 ## 2. Performance Matters
 
-- Run TypeScript on Bun or the Workers runtime, run systems code in Go, and serve Python models with ONNX Runtime where possible.
+- Run TypeScript on Node.js (LTS) or the Workers runtime, run systems code in Go, and serve Python models with ONNX Runtime where possible.
 - Keep data close to compute. For example, Workers reach PostgreSQL through Hyperdrive for connection pooling and caching.
 - Measure before you add caching. Redis or KV must have a documented reason.
 

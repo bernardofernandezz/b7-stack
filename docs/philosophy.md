@@ -24,5 +24,5 @@ Starting a project means making dozens of decisions before you write any product
 T3 showed that a small, opinionated, type-safe stack with a generator beats a blank page. B7 keeps that idea and changes three things:
 
 1. **More than one profile.** It covers APIs in Go, systems tooling and ML in Python, not only TypeScript web apps.
-2. **Different core technologies.** It uses TanStack Start, Hono, oRPC and Cloudflare Workers.
+2. **Different core technologies.** It uses TanStack Start, oRPC, Hono (for standalone APIs) and Cloudflare Workers.
 3. **SaaS building blocks.** It documents organizations, billing, webhooks and background jobs as optional modules.

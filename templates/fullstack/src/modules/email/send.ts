@@ -4,7 +4,7 @@ import type { AppEnv } from "../../env";
 export type Email = { to: string; subject: string; html: string; text: string };
 
 /** The only caller of the email provider. Uses html/text: Resend's `react` option is Node-only. */
-export async function sendEmail(env: AppEnv, email: Email): Promise<void> {
+export async function sendEmail(env: Pick<AppEnv, "EMAIL_FROM" | "RESEND_API_KEY">, email: Email): Promise<void> {
   if (!env.RESEND_API_KEY) {
     if (import.meta.env.DEV) {
       console.info(

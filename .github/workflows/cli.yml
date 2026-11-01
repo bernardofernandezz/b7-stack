@@ -12,10 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md). Add config 2 once organizations and billing exist.
+        # Representative configurations (docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }
+          - { name: organizations, args: "--organizations" }
+          - { name: billing, args: "--billing stripe" }
+          - { name: b2b-saas, args: "--organizations --email resend --billing stripe" }
     services:
       postgres:
         image: postgres:17-alpine
@@ -53,10 +56,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md). Add config 2 once organizations and billing exist.
+        # Representative configurations (docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }
+          - { name: organizations, args: "--organizations" }
+          - { name: billing, args: "--billing stripe" }
+          - { name: b2b-saas, args: "--organizations --email resend --billing stripe" }
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -73,7 +79,7 @@ jobs:
           docker compose up -d --build --wait
           pnpm exec playwright install --with-deps chromium
           # Auth rate limits are real through Caddy, so only the production-stack flows run here (see the template CI).
-          BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation
+          BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation billing
       - if: failure()
         working-directory: ${{ runner.temp }}/demo-app
         run: docker compose logs

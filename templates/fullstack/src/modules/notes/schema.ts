@@ -1,3 +1,4 @@
+// biome-ignore-all assist/source/organizeImports: B7 feature regions
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "../auth/schema";
 // #if organizations

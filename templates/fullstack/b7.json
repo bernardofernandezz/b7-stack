@@ -2,6 +2,7 @@
   "profile": "fullstack",
   "options": {
     "email": "resend",
-    "organizations": true
+    "organizations": true,
+    "billing": "stripe"
   }
 }

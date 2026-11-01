@@ -100,18 +100,18 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [x] **4.3 Option flags and prompts.** (4d26280) needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
   - *Files:* `cli/index.js`, `cli/README.md`, `cli/test/`
   - *Done when:* `--organizations`, `--billing <stripe|none>` and `--email <resend|none>` exist with matching prompts. Only options with a tested overlay are offered. The generated `b7.json` records the resolved configuration, including derived values.
-- [ ] **4.4 CI matrix over representative configurations.** needs: 4.3. In progress: the matrix runs configuration 1 (`--email none`) and the default (`--email resend`); configuration 2 is added with 5.1 and 5.2.
+- [x] **4.4 CI matrix over representative configurations.** needs: 4.3. The matrix runs configuration 1 (`--email none`), the default, each option alone, and configuration 2 (`--organizations --billing stripe`).
   - *Spec:* [docs/configuration-model.md › Representative configurations](docs/configuration-model.md#representative-configurations)
   - *Files:* `.github/workflows/cli.yml`
   - *Done when:* CI generates configurations 1 and 2 (once their overlays exist) and runs each project's checks.
 
 ## Phase 5: Organizations and Stripe (1.0)
 
-- [x] **5.1 `organizations` overlay.** needs: 4.1. Built as feature regions (ADR-014). M-T4 not needed: B7 never calls `hasPermission`.
+- [x] **5.1 `organizations` overlay.** (d3c4472) needs: 4.1. Built as feature regions (ADR-014). M-T4 not needed: B7 never calls `hasPermission`.
   - *Spec:* [stacks/fullstack/authentication.md › With organizations](stacks/fullstack/authentication.md#with-organizations-optional), [Tenant isolation](stacks/fullstack/authentication.md#tenant-isolation)
   - *Files:* `templates/fullstack/+organizations/` (plugin, `requireMembership` and `requirePermission` in `src/rpc/`, `organization_id` on notes, invitations via Resend, migration)
   - *Done when:* H-T2 and M-T1…M-T4 pass locally, and the generated project's checks pass.
-- [ ] **5.2 `billing: stripe` overlay.** needs: 4.1
+- [x] **5.2 `billing: stripe` overlay.** needs: 4.1. S-T1, S-T2, S-T3, B-T1…B-T6 pass locally with Stripe faked at `fetch`. The scheduler calls an internal endpoint instead of running a second build.
   - *Spec:* [stacks/fullstack/billing.md](stacks/fullstack/billing.md) (tables, Stripe mapping, webhook verification, event processing), decisions A8 and A9
   - *Files:* `templates/fullstack/+billing-stripe/` (adapter implementing `BillingProvider` in `src/modules/billing/`, tables and migration, `src/routes/api/webhooks/stripe.ts`, reconciliation in `src/jobs/`, a `scheduler` Compose service)
   - *Done when:* S-T1 and B-T1…B-T6 pass locally (Stripe faked at the HTTP boundary), and the generated project's checks pass.

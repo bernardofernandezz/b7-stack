@@ -163,6 +163,7 @@ if (existsSync(example)) {
     join(target, ".env"),
     readFileSync(example, "utf8")
       .replace(/^BETTER_AUTH_SECRET=$/m, `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`)
+      .replace(/^CRON_SECRET=$/m, `CRON_SECRET=${randomBytes(32).toString("base64")}`)
       .replace(/^POSTGRES_PASSWORD=postgres$/m, `POSTGRES_PASSWORD=${dbPassword}`)
       .replace("postgres://postgres:postgres@", `postgres://postgres:${dbPassword}@`),
   );

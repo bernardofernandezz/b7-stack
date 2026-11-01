@@ -21,6 +21,8 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - `create-b7 --email resend|none` (and prompts): a smaller configuration drops files, dependencies and regions, then gets a fresh migration, route tree, lockfile and formatting. The default email option is `resend` (4.3).
 - CI generates each representative configuration and runs its checks and Compose E2E (4.4, partial).
 - `create-b7 --organizations`: Better Auth organizations with owner/admin/member roles, invitations by email, `/organization` and `/accept-invitation/$id` pages, and notes scoped to the active organization; membership is read from the database on every call (5.1).
+- `create-b7 --billing stripe`: Stripe Checkout and customer portal, a verified webhook route with an inbox, per-subscription row locks and state fetched from Stripe, derived entitlements (the free plan keeps 20 notes), and a `scheduler` service that runs reconciliation daily through `/api/internal/reconcile` (5.2).
+- The CI matrix covers configuration 2 (organizations + email + Stripe) and each option on its own (4.4).
 
 ### Changed
 - The template's migrations are squashed into one `0000_init` (nothing was deployed yet) (5.1).

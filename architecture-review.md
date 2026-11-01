@@ -115,7 +115,7 @@ Confidence is **High** (vendor docs state it), **Medium** (each piece is documen
 - **S2.** A Better Auth instance created per request has acceptable CPU cost. The 1.5 example constructs it inside `fetch` but doesn't discuss cost.
 - **S3.** Start's `ANY` server-route handler key works. oRPC's docs use it, and Start's server-routes page does not list it. The fallback is to list each method explicitly.
 - **S4.** Stripe's `constructEventAsync` and `createSubtleCryptoProvider` exist and work on the current SDK in workerd. The only official source is the 2021 Cloudflare post.
-- **S5.** `subscription_data.metadata` and `customer` are the right Stripe Checkout Session parameters for linking a session to a customer. This comes from B7's prior knowledge and was not re-fetched.
+- **S5.** `subscription_data.metadata` and `customer` are the right Stripe Checkout Session parameters for linking a session to a customer. **Checked 2026-11-01** against the `stripe` SDK 23.1.0 types (API `2026-10-28`), and exercised by test S-T3 with Stripe faked.
 
 ### Implementation hypotheses (B7 design choices to validate)
 

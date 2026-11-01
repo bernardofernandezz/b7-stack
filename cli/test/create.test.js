@@ -16,7 +16,7 @@ test("scaffolds the fullstack template", () => {
   assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).name, "my-app");
   assert.deepEqual(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")), {
     profile: "fullstack",
-    options: { email: "resend", organizations: false },
+    options: { email: "resend", organizations: false, billing: "none" },
     derived: { scheduler: false },
   });
   assert.ok(!existsSync(join(app, "b7.features.json")));
@@ -31,6 +31,10 @@ test("scaffolds the fullstack template", () => {
   for (const skipped of ["node_modules", "dist", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
   assert.ok(!existsSync(join(app, "src/modules/organizations")));
   assert.doesNotMatch(readFileSync(join(app, "src/modules/notes/schema.ts"), "utf8"), /organizationId/);
+  assert.ok(!existsSync(join(app, "src/modules/billing")));
+  assert.doesNotMatch(readFileSync(join(app, "compose.yaml"), "utf8"), /scheduler|STRIPE/);
+  assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).dependencies.stripe, undefined);
+  assert.doesNotMatch(readFileSync(join(app, "src/rpc/router.ts"), "utf8"), /biome-ignore-all/);
 });
 
 test("--organizations keeps the organizations feature", () => {
@@ -52,6 +56,16 @@ const markersIn = (dir) =>
     }
   });
 
+test("--billing stripe keeps billing and derives the scheduler", () => {
+  const app = join(mkdtempSync(join(tmpdir(), "b7-")), "billing");
+  create(app, "--billing", "stripe");
+  assert.ok(existsSync(join(app, "src/routes/api/webhooks/stripe.ts")));
+  assert.match(readFileSync(join(app, "compose.yaml"), "utf8"), /scheduler:/);
+  assert.match(readFileSync(join(app, ".env"), "utf8"), /^CRON_SECRET=.{44}$/m);
+  assert.deepEqual(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")).derived, { scheduler: true });
+  assert.deepEqual(markersIn(app), []);
+});
+
 test("--email none drops the email feature", () => {
   const app = join(mkdtempSync(join(tmpdir(), "b7-")), "no-email");
   create(app, "--email", "none");
@@ -70,7 +84,7 @@ test("--email none drops the email feature", () => {
 test("configuration rule violations exit with the rule number", () => {
   const base = mkdtempSync(join(tmpdir(), "b7-"));
   assert.throws(() => create(join(base, "a"), "--email", "smtp"), (e) => e.stdout.includes("Rule 1"));
-  assert.throws(() => create(join(base, "b"), "--billing", "stripe"), (e) => e.stdout.includes("Rule 1"));
+  assert.throws(() => create(join(base, "b"), "--billing", "paypal"), (e) => e.stdout.includes("Rule 1"));
   assert.throws(() => create(join(base, "c"), "--organizations", "--email", "none"), (e) => e.stdout.includes("Rule 2"));
 });
 

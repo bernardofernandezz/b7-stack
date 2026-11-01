@@ -24,7 +24,7 @@ postgres:   postgres:17-alpine, named volume, published on 127.0.0.1:5432 for lo
 migrate:    target migrate, runs once; app waits for service_completed_successfully
 app:        target runtime, :3000 on the Compose network only, health-checked, init: true
 caddy:      caddy:2-alpine on :80/:443, reverse_proxy app:3000, waits for app to be healthy
-scheduler†: app image, a different command; billing reconciliation (A9)
+scheduler†: alpine; POSTs to app:3000/api/internal/reconcile daily with CRON_SECRET (A9)
 worker†:    app image, consumes the job queue (queues)
 minio†:     S3-compatible storage for local development (storage: s3)
 ```

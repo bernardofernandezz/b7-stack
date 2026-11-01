@@ -43,7 +43,7 @@ Each responsibility has exactly one owner.
 | Business logic | `src/modules/*/service.ts` | — | B7 convention |
 | Validation | Zod schemas on oRPC procedures | `procedures.ts` | oRPC |
 | Persistence | Drizzle + `pg` | `src/db/*` | [Drizzle node-postgres](https://orm.drizzle.team/docs/get-started-postgresql) |
-| Scheduled jobs and queue consumers | Separate Compose services from the app image | `src/jobs/*` | B7 convention ([infrastructure](infrastructure.md#compose-services)) |
+| Scheduled jobs | The `scheduler` Compose service calls an internal route; the work runs in the app | `src/routes/api/internal/*` | B7 convention ([infrastructure](infrastructure.md#compose-services)) |
 | TLS, client IP | **Caddy** | `Caddyfile` | [Caddy reverse_proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) |
 
 **What is deliberately absent:**
@@ -79,14 +79,14 @@ Defining `src/start.ts` **disables Start's automatic CSRF protection for server 
 ```
 src/
 ├── start.ts                  # createStart: request middleware (scope) + serverFn CSRF guard
-├── jobs/                     # only with billing or queues: entry points for the scheduler and worker services
 ├── routes/
 │   ├── ...                   # UI routes
 │   └── api/
 │       ├── auth/$.ts         # Better Auth
 │       ├── rpc.$.ts          # oRPC RPCHandler
 │       ├── v1.$.ts           # oRPC OpenAPIHandler (publicApi only)
-│       └── webhooks/stripe.ts | abacatepay.ts   # billing only
+│       ├── webhooks/stripe.ts | abacatepay.ts   # billing only
+│       └── internal/reconcile.ts                # billing only: called by the scheduler, not routed by Caddy
 ├── lib/orpc.ts               # isomorphic client (RPCLink / createRouterClient)
 ├── rpc/
 │   ├── router.ts             # root router composed from module routers

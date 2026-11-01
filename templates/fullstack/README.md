@@ -9,6 +9,9 @@ Email: Resend, for email verification (required to sign in) and password reset.
 <!-- #if organizations -->
 Organizations: Better Auth's organization plugin. Notes belong to the active organization and are shared by its members; owners and admins invite members by email at `/organization`.
 <!-- #endif -->
+<!-- #if billing -->
+Billing: Stripe Checkout and customer portal at `/billing`, a verified webhook at `/api/webhooks/stripe`, derived entitlements (the free plan keeps 20 notes; Pro is unlimited), and a `scheduler` service that reconciles subscriptions daily. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_PRO` in `.env`; locally, `stripe listen --forward-to localhost:3000/api/webhooks/stripe` prints the webhook secret.
+<!-- #endif -->
 
 The example domain is a per-user notes list: small, but it covers SSR, typed RPC, validation, persistence, sessions and authorization.
 
@@ -118,12 +121,17 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 | Organizations: create, invite by email, accept, notes shared within the organization | Tested locally and in Compose | `e2e/organizations.spec.ts` (reads the invitation ID from the database) |
 | Tenant isolation (M-T1), no active organization (M-T2), roles from the member row (M-T3), removed member rejected immediately (H-T2) | Tested | `test/organizations.test.ts` |
 <!-- #endif -->
+<!-- #if billing -->
+| Stripe webhooks: signature (S-T1), reverse order (S-T2), duplicates (B-T1), failure and retry (B-T2), statuses (B-T3), 50 concurrent (B-T4), reconciliation (B-T5) | Tested with Stripe faked at `fetch` | `test/billing-sync.test.ts` |
+| Checkout links the customer (S-T3); no state change before a webhook (B-T6); free-plan note limit | Tested with Stripe faked at `fetch` | `test/billing-sync.test.ts`, `e2e/billing.spec.ts` |
+| Scheduler calls reconciliation; Caddy hides `/api/internal/*` | Tested in Compose | App log `POST /api/internal/reconcile [200]`; `e2e/billing.spec.ts` (404 through Caddy) |
+| Real Stripe test-mode checkout and webhooks | **Not tested** | Needs Stripe keys |
+<!-- #endif -->
 | Cross-site RPC rejected by CSRF middleware (T-T4) | Tested in a production build | curl with a foreign `Origin` and `Sec-Fetch-Site: cross-site` gives 403. Not automated |
 <!-- #if email -->
 | Resend `sendEmail()` | Tested with Resend faked at the HTTP boundary | `test/email.test.ts`. **Never sent through the live Resend API** (no key available) |
 <!-- #endif -->
 | Production build and images | Tested | `vite build`, `docker compose up --build --wait` (all services healthy), runtime image 529 MB |
-| Billing contract (states, entitlements, Stripe/AbacatePay status maps) | Implemented, unit-tested, **not wired** | `test/billing.test.ts`. No adapter, tables, webhook route or scheduler |
 | CI workflow | Written, **never run** | `.github/workflows/ci.yml`. Its steps were run by hand |
 | Public host with a domain and HTTPS, real email, load (D-T2) | **Not tested** | Needs a server and a domain (and a Resend key for email) |
 
@@ -135,7 +143,7 @@ None of these are installed. Each adds only what the [feature table](../../docs/
 |--------|-------------------|-------|
 | `oauthProviders` | `socialProviders: { github: { clientId, clientSecret } }` in `createAuth`, the two env vars in `src/env.ts`, a button calling `authClient.signIn.social` | Prepared, not configured or tested |
 | `organizations` (needs email) | Better Auth `organization` plugin, `scoped` in `src/rpc/middleware.ts` with `requireMembership`/`requirePermission` from `src/modules/organizations/`, `organization_id` on tenant tables ([chain](../../stacks/fullstack/authentication.md#with-organizations-optional)) | `create-b7 --organizations` |
-| `billing` | One adapter implementing `BillingProvider` in `src/modules/billing/adapters/`, the tables from [billing.md](../../stacks/fullstack/billing.md#tables), `src/routes/api/webhooks/<provider>.ts`, and a reconciliation scheduler | Contract only (M3/M5) |
+| `billing` | `src/modules/billing/` (Stripe adapter, inbox sync, plans), `src/routes/api/webhooks/stripe.ts`, `src/routes/api/internal/reconcile.ts` and the `scheduler` service | `create-b7 --billing stripe`; AbacatePay not implemented (M5) |
 | `publicApi` | `@orpc/openapi`, `src/routes/api/v1.$.ts` with `OpenAPIHandler` over the same router | Not implemented |
 | `turnstile`, `sentry`, `passkeys` | See [infrastructure.md](../../stacks/fullstack/infrastructure.md#optional-services) | Not implemented |
 

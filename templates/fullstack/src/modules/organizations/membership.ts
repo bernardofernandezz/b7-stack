@@ -1,4 +1,4 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import type { Session } from "../auth/auth";
@@ -21,9 +21,7 @@ export async function requireMembership(db: Db, userId: string, session: Session
   return { organizationId, role: row.role };
 }
 
-/** Checks the role from the member row (see `scoped` in src/rpc/middleware.ts) against the access-control statements. */
-export const requirePermission = (permission: Permission) =>
-  os.$context<{ scope: { role: string } }>().middleware(({ context, next }) => {
-    if (!roleCan(context.scope.role, permission)) throw new ORPCError("FORBIDDEN");
-    return next();
-  });
+/** Throws FORBIDDEN unless the role from the member row (see `scoped`) grants every action in `permission`. */
+export function requireRole(role: string, permission: Permission) {
+  if (!roleCan(role, permission)) throw new ORPCError("FORBIDDEN");
+}

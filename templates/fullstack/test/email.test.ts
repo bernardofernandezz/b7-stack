@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AppEnv } from "../src/env";
 import { sendEmail } from "../src/modules/email/send";
 import { verificationEmail } from "../src/modules/email/templates";
 
-const env: AppEnv = {
-  DATABASE_URL: "postgres://localhost/unused",
-  BETTER_AUTH_SECRET: "x".repeat(32),
-  BETTER_AUTH_URL: "http://localhost:3000",
+const env: Parameters<typeof sendEmail>[0] = {
   EMAIL_FROM: "B7 <noreply@example.com>",
   RESEND_API_KEY: "re_test_key",
 };

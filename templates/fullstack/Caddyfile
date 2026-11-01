@@ -2,5 +2,9 @@
 # Caddy ignores X-Forwarded-For sent by clients and sets it to the real client IP, which Better Auth rate-limits on.
 {$APP_URL} {
 	encode zstd gzip
+	# #if billing
+	# Internal endpoints (the scheduler's reconcile call) are reachable only on the Compose network.
+	respond /api/internal/* 404
+	# #endif
 	reverse_proxy app:3000
 }

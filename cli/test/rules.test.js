@@ -43,6 +43,7 @@ test("rule 4: experimental choices print a notice", () => {
 
 test("regions keep or drop lines by condition and remove markers", () => {
   const text = [
+    "// biome-ignore-all assist/source/organizeImports: B7 feature regions",
     "a",
     "// #if organizations",
     "org",

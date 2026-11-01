@@ -80,7 +80,7 @@ type ApiGoOptions = {
 | Passkeys | EXPERIMENTAL | `passkeys` |
 | Teams, dynamic roles | **DEFERRED** | — |
 | Billing | OPTIONAL | `billing`. Stripe is the reference, and AbacatePay is EXPERIMENTAL (`A7`) |
-| Scheduler service | DERIVED | A `scheduler` Compose service from the app image, enabled when `billing ≠ none` (reconciliation, `A9`) |
+| Scheduler service | DERIVED | A `scheduler` Compose service that calls the app's internal reconcile endpoint daily, enabled when `billing ≠ none` (`A9`) |
 | Email | OPTIONAL | `email` |
 | Storage | OPTIONAL | `storage` (S3-compatible) |
 | Queues | OPTIONAL | `queues` |
@@ -100,7 +100,7 @@ type ApiGoOptions = {
 | `organizations` | Better Auth `organization` plugin, `requireMembership` and `requirePermission` middleware | — | — |
 | `oauthProviders[p]` | provider config | `<P>_CLIENT_ID`, `<P>_CLIENT_SECRET` *(secret)* | The OAuth provider |
 | `passkeys` | Better Auth passkey plugin | — | — |
-| `billing: stripe` | `stripe`, `modules/billing` (Stripe adapter), webhook route, `scheduler` service | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)* | Stripe |
+| `billing: stripe` | `stripe`, `modules/billing` (Stripe adapter), webhook route, internal reconcile route, `scheduler` service | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)*, `STRIPE_PRICE_PRO`, `CRON_SECRET` *(secret)* | Stripe |
 | `billing: abacatepay` | `modules/billing` (AbacatePay adapter, `fetch`), webhook route, `scheduler` service | `ABACATEPAY_API_KEY` *(secret)*, `ABACATEPAY_WEBHOOK_SECRET` *(secret)* | AbacatePay |
 | `email: resend` | `resend`, `modules/email/send.ts` | `RESEND_API_KEY` *(secret; optional in local dev, where emails are logged instead)*, `EMAIL_FROM` | Resend + a verified domain |
 | `storage: s3` | S3 client, `modules/storage` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` *(secret)* | Any S3-compatible service |

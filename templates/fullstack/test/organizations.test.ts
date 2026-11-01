@@ -3,8 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
-import { requirePermission } from "../src/modules/organizations/membership";
-import { scoped } from "../src/rpc/middleware";
+import { requirePermission, scoped } from "../src/rpc/middleware";
 import { router } from "../src/rpc/router";
 import { signUpVerified, signUpWithScope } from "./helpers";
 
@@ -18,7 +17,7 @@ const testRouter = {
   ...router,
   manageBilling: scoped.use(requirePermission({ billing: ["manage"] })).handler(() => "ok"),
 };
-const clientFor = (headers: Headers) => createRouterClient(testRouter, { context: { db, auth, headers } });
+const clientFor = (headers: Headers) => createRouterClient(testRouter, { context: { db, auth, env, headers } });
 const rejectsWith = (promise: Promise<unknown>, code: string) =>
   expect(promise).rejects.toSatisfy((e) => e instanceof ORPCError && e.code === code);
 

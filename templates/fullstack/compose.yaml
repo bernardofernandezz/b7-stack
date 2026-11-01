@@ -1,4 +1,7 @@
 # `docker compose up -d --build` runs the whole app: postgres → migrate → app → caddy (:80/:443).
+# #if billing
+# Billing adds the scheduler service, which runs the daily reconciliation.
+# #endif
 # `pnpm run db:up` starts only postgres, for local development.
 # Values come from .env (see .env.example).
 
@@ -36,9 +39,39 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-B7 <onboarding@resend.dev>}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       # #endif
+      # #if billing
+      CRON_SECRET: ${CRON_SECRET:-}
+      # #endif
+      # #if billing=stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
+      # #endif
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped
+
+  # #if billing
+  # Runs billing reconciliation daily through the app's internal endpoint (stacks/fullstack/billing.md › Retry).
+  scheduler:
+    image: alpine:3
+    init: true
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+    # $$ keeps Compose from interpolating; the shell reads CRON_SECRET from the environment.
+    command:
+      - sh
+      - -c
+      - >-
+        while true; do
+        wget -qO- --header "Authorization: Bearer $$CRON_SECRET" --post-data "" http://app:3000/api/internal/reconcile
+        || echo "reconcile failed";
+        sleep 86400;
+        done
+    depends_on:
+      app: { condition: service_healthy }
+    restart: unless-stopped
+  # #endif
 
   caddy:
     image: caddy:2-alpine

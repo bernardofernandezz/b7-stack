@@ -1,5 +1,4 @@
-// Provider-neutral billing contract (stacks/fullstack/billing.md). Not wired into the app:
-// it is included only when `billing ≠ none`, together with one adapter, its tables, webhook route and cron.
+// Provider-neutral billing contract (stacks/fullstack/billing.md). One adapter per provider implements BillingProvider.
 
 export type SubscriptionStatus = "incomplete" | "trialing" | "active" | "past_due" | "suspended" | "canceled";
 
@@ -25,7 +24,16 @@ export function entitlementsFor<TFeature extends string>(
 export type WebhookEvent = { id: string; type: string; data: unknown };
 
 /** Current provider state. Webhooks only trigger a fetch of this; state never comes from event payloads. */
-export type ProviderSubscription = { id: string; status: SubscriptionStatus; currentPeriodEnd: Date | null };
+export type ProviderSubscription = {
+  id: string;
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date | null;
+  /** The provider's price, mapped to a plan through `providerPriceId`. */
+  priceId: string | null;
+  /** Set at checkout (Stripe: subscription metadata). Null for subscriptions created outside the app. */
+  customerRef: string | null;
+  providerCustomerId: string | null;
+};
 
 /** Thrown when a webhook fails verification. `status` is the HTTP response (400 bad signature, 401 bad secret). */
 export class WebhookVerificationError extends Error {

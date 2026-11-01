@@ -1,3 +1,4 @@
+// biome-ignore-all assist/source/organizeImports: B7 feature regions
 import { expect, test } from "@playwright/test";
 // #if email
 import { verificationLink } from "./helpers";

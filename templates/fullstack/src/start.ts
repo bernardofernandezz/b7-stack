@@ -11,7 +11,7 @@ function createServices() {
   const { db } = createDb(env.DATABASE_URL);
   // Better Auth's deferred work (e.g. sending the verification email) outlives the response; log its failures.
   const background = (task: Promise<unknown>) => void task.catch((error) => console.error("[background]", error));
-  return { db, auth: createAuth({ db, env, waitUntil: background }) };
+  return { db, env, auth: createAuth({ db, env, waitUntil: background }) };
 }
 
 /** Exposes the shared services to SSR, Better Auth and oRPC through the request context. */

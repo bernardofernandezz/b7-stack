@@ -1,3 +1,4 @@
+// biome-ignore-all assist/source/organizeImports: B7 feature regions
 import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";

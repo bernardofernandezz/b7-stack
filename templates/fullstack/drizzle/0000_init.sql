@@ -92,6 +92,35 @@ CREATE TABLE "note" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "billing_customers" (
+	"provider" text NOT NULL,
+	"customer_ref" text NOT NULL,
+	"provider_customer_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_customers_provider_customer_ref_pk" PRIMARY KEY("provider","customer_ref")
+);
+--> statement-breakpoint
+CREATE TABLE "billing_inbox" (
+	"provider" text NOT NULL,
+	"event_id" text NOT NULL,
+	"event_type" text NOT NULL,
+	"received_at" timestamp DEFAULT now() NOT NULL,
+	"processed_at" timestamp,
+	CONSTRAINT "billing_inbox_provider_event_id_pk" PRIMARY KEY("provider","event_id")
+);
+--> statement-breakpoint
+CREATE TABLE "subscriptions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"customer_ref" text NOT NULL,
+	"plan_id" text NOT NULL,
+	"status" text NOT NULL,
+	"provider" text NOT NULL,
+	"provider_subscription_id" text NOT NULL,
+	"current_period_end" timestamp,
+	"synced_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_inviter_id_user_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -108,4 +137,7 @@ CREATE INDEX "member_userId_idx" ON "member" USING btree ("user_id");--> stateme
 CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");--> statement-breakpoint
 CREATE INDEX "note_user_id_created_at_idx" ON "note" USING btree ("user_id","created_at");--> statement-breakpoint
-CREATE INDEX "note_organization_id_created_at_idx" ON "note" USING btree ("organization_id","created_at");
+CREATE INDEX "note_organization_id_created_at_idx" ON "note" USING btree ("organization_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "billing_customers_provider_customer_idx" ON "billing_customers" USING btree ("provider","provider_customer_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "subscriptions_provider_subscription_idx" ON "subscriptions" USING btree ("provider","provider_subscription_id");--> statement-breakpoint
+CREATE INDEX "subscriptions_customer_ref_idx" ON "subscriptions" USING btree ("customer_ref","created_at");

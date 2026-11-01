@@ -11,7 +11,7 @@ const { db, close } = createDb(env.DATABASE_URL);
 const auth = createAuth({ db, env });
 afterAll(close);
 
-const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, headers } });
+const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, env, headers } });
 
 const signUp = async () => (await signUpWithScope(auth)).headers;
 

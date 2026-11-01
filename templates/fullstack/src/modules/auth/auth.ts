@@ -1,3 +1,4 @@
+// biome-ignore-all assist/source/organizeImports: B7 feature regions
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Db } from "../../db/client";

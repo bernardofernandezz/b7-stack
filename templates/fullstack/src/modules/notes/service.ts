@@ -1,14 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
+import type { Scope } from "../../lib/scope";
 import { note } from "./schema";
-
-/** Who is asking, from the session (see `scoped` in src/rpc/middleware.ts), never from input. */
-export type Scope = {
-  userId: string;
-  // #if organizations
-  organizationId: string;
-  // #endif
-};
 
 const columns = { id: note.id, content: note.content, createdAt: note.createdAt };
 
@@ -23,6 +16,10 @@ function inScope(scope: Scope) {
 
 export function listNotes(db: Db, scope: Scope) {
   return db.select(columns).from(note).where(inScope(scope)).orderBy(desc(note.createdAt)).limit(100);
+}
+
+export async function countNotes(db: Db, scope: Scope) {
+  return db.$count(note, inScope(scope));
 }
 
 export async function createNote(db: Db, scope: Scope, content: string) {

@@ -5,10 +5,11 @@ B7 is an opinionated, modular ecosystem for building modern software. It is a se
 B7 tries to make good architectural decisions easy, without hiding complexity behind new abstractions. It follows the spirit of [T3 Stack](https://create.t3.gg/) but covers more than one kind of project: web apps, APIs, system tools, machine learning and SaaS products.
 
 ```sh
-npm create b7@latest my-app
+npm create b7@latest my-app                                              # asks for the options
+npm create b7@latest my-app -- --organizations --billing stripe          # B2B SaaS
 ```
 
-> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)). The generated project runs locally and as a Docker Compose stack (PostgreSQL, migrations, app, Caddy), but it is **not production-ready** until the [release checklist](RELEASE.md) reaches 1.0. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
+> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)), with the options `--email resend|none`, `--organizations` and `--billing stripe|none`. The generated project runs locally and as a Docker Compose stack (PostgreSQL, migrations, app, Caddy), but it is **not production-ready** until the [release checklist](RELEASE.md) reaches 1.0. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
 
 ## Principles
 

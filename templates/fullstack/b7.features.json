@@ -8,6 +8,10 @@
     "organizations": {
       "choices": [false, true],
       "default": false
+    },
+    "billing": {
+      "choices": ["none", "stripe"],
+      "default": "none"
     }
   },
   "features": {
@@ -32,6 +36,18 @@
         "test/organizations.test.ts",
         "e2e/organizations.spec.ts"
       ]
+    },
+    "billing": {
+      "files": [
+        "src/modules/billing",
+        "src/routes/billing.tsx",
+        "src/routes/api/webhooks",
+        "src/routes/api/internal",
+        "test/billing.test.ts",
+        "test/billing-sync.test.ts",
+        "e2e/billing.spec.ts"
+      ],
+      "dependencies": ["stripe"]
     }
   }
 }

@@ -47,10 +47,13 @@ jobs:
           echo "POSTGRES_PASSWORD=$PASSWORD" >> .env
           echo "DATABASE_URL=postgres://postgres:$PASSWORD@localhost:5432/b7" >> .env
           echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+          # #if billing
+          echo "CRON_SECRET=$(openssl rand -base64 32)" >> .env
+          # #endif
       - run: docker compose up -d --build --wait
       - run: pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium
       # Auth rate limits are real through Caddy (3 sign-ups per 10 s per client IP), so only the flows that
       # check the production stack run here; the full suite runs against the dev server in the check job.
-      - run: BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation
+      - run: BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation billing
       - if: failure()
         run: docker compose logs

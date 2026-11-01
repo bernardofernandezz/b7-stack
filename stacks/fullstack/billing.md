@@ -53,7 +53,8 @@ Statuses, from the [Subscription object](https://docs.stripe.com/api/subscriptio
 
 - `current_period_end` is read from the subscription **items** (`items.data[].current_period_end` in the current API object). Pin the Stripe API version in the client.
 - Events that trigger a sync: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` and `invoice.payment_failed`. The **event body is used only to find the subscription ID**. State always comes from `stripe.subscriptions.retrieve(id)`.
-- Linking a checkout to a customer: create the Stripe Customer first (stored in `billing_customers`), then pass `customer` and `subscription_data.metadata.customer_ref` when creating the Checkout Session. **UNVERIFIED:** check these parameter names against the Checkout Session API before implementing (test `S-T3`).
+- Linking a checkout to a customer: create the Stripe Customer first (stored in `billing_customers`), then pass `customer` and `subscription_data.metadata.customer_ref` when creating the Checkout Session. Both parameters exist in the Checkout Session API (checked against the `stripe` SDK types, `2026-10-28` API). A subscription without `customer_ref` still resolves through `billing_customers` by its Stripe customer (test `S-T3`).
+- Plans live in `src/modules/billing/plans.ts`; the Pro plan's Stripe price comes from `STRIPE_PRICE_PRO`, because price IDs differ between test and live mode. As an example entitlement, the free plan keeps up to 20 notes and `unlimited-notes` lifts it.
 
 ### AbacatePay (EXPERIMENTAL)
 
@@ -132,7 +133,7 @@ Event order is irrelevant, because state is never derived from the event and alw
 
 ### Retry and failure recovery
 - **Provider retries.** Stripe retries for up to 3 days ([webhooks](https://docs.stripe.com/webhooks)). AbacatePay retries 7 times over about 18 hours on timeout, `5xx`, `408` or `429` ([webhook security](https://docs.abacatepay.com/pages/webhooks/security)).
-- **Reconciliation (DERIVED with billing).** A daily job in the `scheduler` Compose service re-fetches every subscription in `incomplete`, `trialing`, `active` or `past_due` whose `synced_at` is older than 24 h, using the same lock-fetch-update steps 5–7. This covers lost webhooks, and it is the **primary** safety net for AbacatePay, given its undocumented payloads and missing period fields.
+- **Reconciliation (DERIVED with billing).** Once a day, the `scheduler` Compose service calls `POST /api/internal/reconcile` (Bearer `CRON_SECRET`; Caddy does not route `/api/internal/*`), which re-fetches every subscription in `incomplete`, `trialing`, `active` or `past_due` whose `synced_at` is older than 24 h, using the same lock-fetch-update steps 5–7. This covers lost webhooks, and it is the **primary** safety net for AbacatePay, given its undocumented payloads and missing period fields.
 - **Manual replay.** Re-running a sync for one subscription ID is the operator's recovery tool. Re-delivering events is never required.
 
 ### Transactional outbox: DEFERRED
@@ -142,9 +143,9 @@ In v0.2, billing has **no side effects outside PostgreSQL**, because entitlement
 
 | Item | Stripe | AbacatePay |
 |------|--------|-----------|
-| Env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET` |
+| Env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `CRON_SECRET` | `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET`, `CRON_SECRET` |
 | Dependency | `stripe` | none (`fetch`) |
-| Route | `src/routes/api/webhooks/stripe.ts` | `src/routes/api/webhooks/abacatepay.ts` |
+| Route | `src/routes/api/webhooks/stripe.ts`, `src/routes/api/internal/reconcile.ts` | `src/routes/api/webhooks/abacatepay.ts`, the same reconcile route |
 | Scheduler service | Required (reconciliation) | Required (reconciliation) |
 
 ## Acceptance tests

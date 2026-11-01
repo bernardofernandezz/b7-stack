@@ -14,7 +14,7 @@ const getClient = createIsomorphicFn()
         context: () => {
           const scope = getGlobalStartContext();
           if (!scope) throw new Error("request scope missing");
-          return { db: scope.db, auth: scope.auth, headers: new Headers(getRequestHeaders()) };
+          return { db: scope.db, auth: scope.auth, env: scope.env, headers: new Headers(getRequestHeaders()) };
         },
       }),
   )

@@ -35,6 +35,7 @@
     "react-dom": "^19.3.1",
     "resend": "^6.35.0",
     "srvx": "^1.0.8",
+    "stripe": "^23.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

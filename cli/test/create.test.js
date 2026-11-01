@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 
 const cli = join(import.meta.dirname, "..", "index.js");
@@ -32,4 +32,23 @@ test("rejects invalid names and unknown templates", () => {
   const base = mkdtempSync(join(tmpdir(), "b7-"));
   assert.throws(() => create(join(base, "My App")));
   assert.throws(() => create(join(base, "ok"), "-t", "nope"), (e) => e.stdout.includes("Available: fullstack"));
+});
+
+test("--help lists flags and templates, --version prints the package version", () => {
+  const help = execFileSync("node", [cli, "--help"], { encoding: "utf8" });
+  for (const flag of ["--template", "--yes", "--no-install", "--no-git", "--version", "fullstack"]) assert.ok(help.includes(flag));
+  const { version } = JSON.parse(readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8"));
+  assert.equal(execFileSync("node", [cli, "-v"], { encoding: "utf8" }).trim(), version);
+});
+
+// Skipped where pnpm sits next to node (npm install -g), since PATH can't then exclude it.
+test("warns instead of failing when pnpm is missing", { skip: existsSync(join(dirname(process.execPath), "pnpm")) }, () => {
+  const app = join(mkdtempSync(join(tmpdir(), "b7-")), "no-pnpm");
+  // PATH without pnpm: only the directory of the running node binary.
+  const out = execFileSync(process.execPath, [cli, app, "--yes", "--no-git"], {
+    encoding: "utf8",
+    env: { ...process.env, PATH: dirname(process.execPath) },
+  });
+  assert.match(out, /pnpm not found/);
+  assert.ok(existsSync(join(app, "package.json")));
 });

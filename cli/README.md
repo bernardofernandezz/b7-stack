@@ -5,7 +5,7 @@ npm create b7@latest my-app                    # asks which template
 npm create b7@latest my-app -- -t fullstack    # or: pnpm create b7 my-app -t fullstack
 ```
 
-Copies a template from [`templates/`](../templates), including its `b7.json` (the configuration it implements), creates `.env` with a generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, runs `git init` and `pnpm install`.
+Copies a template from [`templates/`](../templates), including its `b7.json` (the configuration it implements), creates `.env` with a generated `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, runs `git init` and `pnpm install` (when pnpm is missing it says how to install it, since Node.js 25+ no longer ships corepack).
 
 Each directory in `templates/` is a template, so adding `templates/web` makes `-t web` available. A template named `<name>` uses `b7-<name>` as its placeholder project name in `package.json` and `README.md`. Today only `fullstack` exists.
 
@@ -14,6 +14,7 @@ Each directory in `templates/` is a template, so adding `templates/web` makes `-
 | `--template`, `-t <name>` | Template to use. Without it, the CLI asks (or takes the first with `--yes`) |
 | `--yes`, `-y` | Accept defaults, no prompts |
 | `--no-install` · `--no-git` | Skip `pnpm install` · `git init` |
+| `--version`, `-v` · `--help`, `-h` | Print the version · usage |
 
 **Preview.** The generated project is tested locally, not yet on a deployed Worker. Read its *Verification status* before deploying.
 

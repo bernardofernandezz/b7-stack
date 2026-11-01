@@ -34,19 +34,19 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 0: Hygiene
 
-- [ ] **0.1 HUMAN: run CI for the first time.** Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
+- [~] **0.1 HUMAN: run CI for the first time.** blocked: needs `git push` and a PR. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
   - *Done when:* the `create-b7` workflow is green. Any failure becomes a new task below this one.
-- [ ] **0.2 CLI `--help`, `--version` and a missing-pnpm message.**
+- [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.**
   - *Spec:* [cli/README.md](cli/README.md)
   - *Files:* `cli/index.js`, `cli/test/create.test.js`, `cli/README.md`
-  - *Done when:* `node cli/index.js --help` lists every flag and the available templates. `--version` prints `cli/package.json` `version`. When `pnpm` is not on `PATH`, the CLI says to run `corepack enable`. `pnpm test` in `cli/` covers `--help` and `--version`.
+  - *Done when:* `node cli/index.js --help` lists every flag and the available templates. `--version` prints `cli/package.json` `version`. When `pnpm` is not on `PATH`, the CLI says how to install it. `pnpm test` in `cli/` covers `--help` and `--version`.
 - [ ] **0.3 CLI package metadata.**
   - *Files:* `cli/package.json`, `cli/scripts/copy-template.js`
   - *Done when:* `npm pack` in `cli/` contains `LICENSE` and `README.md`, and `package.json` has `keywords`, `homepage` and `bugs`.
 
 ## Phase 1: Decisions
 
-- [ ] **1.1 HUMAN: approve or reject A1–A11 and A13.**
+- [~] **1.1 HUMAN: approve or reject A1–A11 and A13.** blocked: maintainer decision.
   - *Spec:* [architecture-review.md › Decisions requiring maintainer approval](architecture-review.md#decisions-requiring-maintainer-approval)
   - *Done when:* each decision is marked approved or rejected in that table.
 - [ ] **1.2 Remove "proposed" from the approved decisions.** needs: 1.1
@@ -55,15 +55,15 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 2: Docker target and preview release
 
-- [x] **2.1 Replace Cloudflare Workers with Docker Compose** (maintainer request).
+- [x] **2.1 Replace Cloudflare Workers with Docker Compose** (maintainer request). (dcd2848)
   - *Spec:* [ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target), [infrastructure.md](stacks/fullstack/infrastructure.md), [review › Target change](architecture-review.md#target-change-docker-compose-replaces-cloudflare-workers-2026-11-01)
   - *Files:* `templates/fullstack/{Dockerfile,compose.yaml,Caddyfile,.dockerignore,.env.example}`, `src/start.ts`, `src/db/client.ts`, `src/env.ts`, `vite.config.ts`, `vitest.config.ts`, the CLI's `.env` generation, both CI workflows, the Fullstack docs.
   - *Done when:* C-T1 and C-T2 pass for the template and for a project generated from the packed CLI.
-- [ ] **2.2 HUMAN: a public host.** A server with Docker, a domain pointing at it, ports 80 and 443 open. Copy a generated project there, set `APP_URL=https://<domain>` in `.env`, run `docker compose up -d --build`.
+- [~] **2.2 HUMAN: a public host.** blocked: needs a server and a domain. A server with Docker, a domain pointing at it, ports 80 and 443 open. Copy a generated project there, set `APP_URL=https://<domain>` in `.env`, run `docker compose up -d --build`.
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [ ] **2.3 Run C-T3 against the public host.** needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
-- [ ] **2.4 HUMAN: publish the preview.** needs: 0.1, 0.2, 0.3, 2.1
+- [~] **2.4 HUMAN: publish the preview.** blocked: needs npm credentials and 0.1. needs: 0.1, 0.2, 0.3, 2.1
   - `cd cli && npm publish --tag preview` at version `0.2.0-preview.0`, then `git tag v0.2.0-preview.0`.
   - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
 
@@ -81,7 +81,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [ ] **3.3 No session RPC on every client navigation.**
   - *Files:* `templates/fullstack/src/routes/__root.tsx`, `src/lib/orpc.ts`
   - *Done when:* the session is read through TanStack Query with a cache, and an E2E asserts that navigating between two pages makes no `/api/rpc` session request after the first.
-- [x] **3.4 Fail clearly on a query after the per-request pool closes.** Obsolete with 2.1: the pool now lives for the whole process, so the limitation no longer exists.
+- [x] **3.4 Fail clearly on a query after the per-request pool closes.** (dcd2848) Obsolete with 2.1: the pool now lives for the whole process, so the limitation no longer exists.
 - [ ] **3.5 Drop Kysely's unused SQLite dialects from the bundle.**
   - *Files:* `templates/fullstack/vite.config.ts`
   - *Done when:* `dist/server` is smaller than before (1.8 MB uncompressed on 2026-11-01), and all checks stay green. If no safe alias exists, mark `[x]` with the reason and leave the limitation.
@@ -115,7 +115,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* [stacks/fullstack/billing.md](stacks/fullstack/billing.md) (tables, Stripe mapping, webhook verification, event processing), decisions A8 and A9
   - *Files:* `templates/fullstack/+billing-stripe/` (adapter implementing `BillingProvider` in `src/modules/billing/`, tables and migration, `src/routes/api/webhooks/stripe.ts`, reconciliation in `src/jobs/`, a `scheduler` Compose service)
   - *Done when:* S-T1 and B-T1…B-T6 pass locally (Stripe faked at the HTTP boundary), and the generated project's checks pass.
-- [ ] **5.3 HUMAN: Stripe test-mode keys and a webhook endpoint** on the public host. needs: 2.2, 5.2
+- [~] **5.3 HUMAN: Stripe test-mode keys and a webhook endpoint** blocked: needs a Stripe account and 2.2. on the public host. needs: 2.2, 5.2
 - [ ] **5.4 Deployed billing and load tests.** needs: 5.3
   - *Spec:* S-T2, S-T3, B-T4 in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Done when:* each has a result against the public host in Verification status.
@@ -123,7 +123,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* BA-T2 with `docker compose up --scale app=2`, and D-T2 (sustained load, for example 50 RPS for 10 min) in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Files:* a load script under `templates/fullstack/scripts/`, Verification status
   - *Done when:* rate limits hold across both replicas, and PostgreSQL connections (`pg_stat_activity`) stay flat under load.
-- [ ] **5.5 HUMAN: send a real email through Resend** from a verified domain (sign-up verification and an organization invitation).
+- [~] **5.5 HUMAN: send a real email through Resend** blocked: needs a Resend key and a verified domain. from a verified domain (sign-up verification and an organization invitation).
 - [ ] **5.6 Declare production-ready.** needs: every task above
   - *Done when:* release blockers 1–5 and 7 are all met, the "Preview" notices in the root README, the template README and `cli/README.md` are replaced, and M1–M4 in `ROADMAP.md` are marked done.
 - [ ] **5.7 HUMAN: publish 1.0.0.** needs: 5.6

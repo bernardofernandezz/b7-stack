@@ -24,9 +24,28 @@ const { values, positionals } = parseArgs({
     template: { type: "string", short: "t" },
     install: { type: "boolean", default: true },
     git: { type: "boolean", default: true },
+    help: { type: "boolean", short: "h" },
+    version: { type: "boolean", short: "v" },
   },
   allowNegative: true,
 });
+
+if (values.version) {
+  console.log(JSON.parse(readFileSync(join(here, "package.json"), "utf8")).version);
+  process.exit(0);
+}
+if (values.help) {
+  console.log(`Usage: create-b7 [directory] [options]
+
+Options:
+  -t, --template <name>  Template to use (${TEMPLATES.join(", ")})
+  -y, --yes              Accept defaults, no prompts
+      --no-install       Skip pnpm install
+      --no-git           Skip git init
+  -v, --version          Print the version
+  -h, --help             Print this help`);
+  process.exit(0);
+}
 
 const cancelled = (v) => {
   if (p.isCancel(v)) {
@@ -53,7 +72,7 @@ if (!dir) {
 const target = resolve(dir);
 const name = basename(target);
 if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-  p.cancel(`Invalid name "${name}": use lowercase letters, digits and dashes (it becomes the Worker name).`);
+  p.cancel(`Invalid name "${name}": use lowercase letters, digits and dashes (it becomes the package and Compose project name).`);
   process.exit(1);
 }
 if (existsSync(target) && readdirSync(target).length > 0) {
@@ -105,17 +124,23 @@ if (values.git) {
   if (!(run("git", ["init", "-q"]) && run("git", ["add", "-A"]) && run("git", ["commit", "-qm", "chore: create-b7"])))
     p.log.warn("git init skipped (git missing or not configured)");
 }
-if (values.install) {
+// Node.js 25+ no longer ships corepack, so pnpm may be missing even where Node is installed.
+const hasPnpm = values.install && run("pnpm", ["--version"]);
+if (values.install && !hasPnpm) p.log.warn("pnpm not found: install it with `npm install -g pnpm`, then run `pnpm install`");
+if (hasPnpm) {
   const s = p.spinner();
   s.start("pnpm install");
   if (run("pnpm", ["install"])) s.stop("Dependencies installed");
-  else s.stop("pnpm install failed: run `corepack enable`, then `pnpm install`", 1);
+  else s.stop("pnpm install failed: run `pnpm install` in the project to see why", 1);
 }
 
 p.note(
-  [`cd ${dir}`, ...(values.install ? [] : ["pnpm install"]), "pnpm run db:up", "pnpm run db:migrate", "pnpm run dev"].join(
-    "\n",
-  ),
+  [
+    `cd ${dir}`,
+    ...(hasPnpm ? [] : ["pnpm install"]),
+    "pnpm run db:up && pnpm run db:migrate && pnpm run dev   # develop on :3000",
+    "docker compose up -d --build                            # or run the whole stack",
+  ].join("\n"),
   "Next steps",
 );
 p.outro("Preview release: see README.md › Verification status before deploying.");

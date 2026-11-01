@@ -188,7 +188,8 @@ let installed = false;
 if (hasPnpm && values.install) {
   const s = p.spinner();
   s.start("pnpm install");
-  installed = run("pnpm", ["install"]) && finalize.every((step) => run("pnpm", step.split(" ").slice(1)));
+  // Removed features leave the lockfile stale; CI=true would otherwise make pnpm refuse (frozen lockfile).
+  installed = run("pnpm", ["install", "--no-frozen-lockfile"]) && finalize.every((step) => run("pnpm", step.split(" ").slice(1)));
   if (installed) s.stop(disabled.length ? "Dependencies installed, migration and route tree generated" : "Dependencies installed");
   else s.stop(`Setup failed: run \`${["pnpm install", ...finalize].join(" && ")}\` in the project to see why`, 1);
 } else if (hasPnpm && disabled.length && !run("pnpm", ["install", "--lockfile-only"])) {
@@ -210,3 +211,5 @@ p.note(
   "Next steps",
 );
 p.outro("Preview release: see README.md › Verification status before deploying.");
+// A project that failed to install, migrate or build is still left in place, but the exit code says so (CI).
+if (hasPnpm && values.install && !installed) process.exitCode = 1;

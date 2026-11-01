@@ -35,6 +35,8 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - Architecture review: Workers-only tests marked obsolete, new Compose tests C-T1…C-T3, release blockers updated (2.1).
 
 ### Fixed
+- `create-b7` installs with `--no-frozen-lockfile` (under `CI=true`, pnpm refused the stale lockfile of a smaller configuration) and exits with code 1 when setup fails.
+- CI resolves the packed tarball path before `npm exec`.
 - Caddy now load-balances `app` replicas through Docker DNS; before, `--scale app=N` sent every request to one replica (5.4b).
 
 ## [0.2.0-preview.0] - not yet published

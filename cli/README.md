@@ -1,15 +1,18 @@
 # create-b7 (preview)
 
 ```sh
-npm create b7@latest my-app        # or: pnpm create b7 my-app
+npm create b7@latest my-app                    # asks which template
+npm create b7@latest my-app -- -t fullstack    # or: pnpm create b7 my-app -t fullstack
 ```
 
-Generates the [B7 Fullstack reference implementation](../templates/fullstack/README.md) for `{ "profile": "fullstack", "options": { "email": "resend" } }`, writes `b7.json`, creates `.dev.vars` with a generated `BETTER_AUTH_SECRET`, runs `git init` and `pnpm install`.
+Copies a template from [`templates/`](../templates), including its `b7.json` (the configuration it implements), creates `.dev.vars` with a generated `BETTER_AUTH_SECRET`, runs `git init` and `pnpm install`.
+
+Each directory in `templates/` is a template, so adding `templates/web` makes `-t web` available. A template named `<name>` uses `b7-<name>` as its placeholder project name in `package.json`, `wrangler.jsonc` and `README.md`. Today only `fullstack` exists.
 
 | Flag | Effect |
 |------|--------|
+| `--template`, `-t <name>` | Template to use. Without it, the CLI asks (or takes the first with `--yes`) |
 | `--yes`, `-y` | Accept defaults, no prompts |
-| `--profile <name>` | Only `fullstack` is available |
 | `--no-install` · `--no-git` | Skip `pnpm install` · `git init` |
 
 **Preview.** The generated project is tested locally, not yet on a deployed Worker. Read its *Verification status* before deploying.

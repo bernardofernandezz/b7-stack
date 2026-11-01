@@ -6,26 +6,22 @@ import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 
-const PROFILES = [
-  { value: "fullstack", label: "Fullstack", hint: "TanStack Start, oRPC, Better Auth, PostgreSQL, Workers" },
-  { value: "web", label: "Web", hint: "coming soon", disabled: true },
-  { value: "api", label: "API", hint: "coming soon", disabled: true },
-];
-// Only configuration with a tested template. New options land here once their template exists.
-const CONFIG = { profile: "fullstack", options: { email: "resend" } };
 // Never copied from a working template checkout.
 const SKIP = new Set(["node_modules", "dist", ".wrangler", ".tanstack", ".dev.vars", "test-results", "playwright-report"]);
 
 const here = import.meta.dirname;
 // Published package ships ./template (see prepack); the repo checkout uses ../templates.
-const templateDir = (profile) =>
-  existsSync(join(here, "template", profile)) ? join(here, "template", profile) : join(here, "..", "templates", profile);
+const templatesRoot = existsSync(join(here, "template")) ? join(here, "template") : join(here, "..", "templates");
+// Each directory is a template; its b7.json is the configuration it implements.
+const TEMPLATES = readdirSync(templatesRoot, { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .map((d) => d.name);
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     yes: { type: "boolean", short: "y" },
-    profile: { type: "string" },
+    template: { type: "string", short: "t" },
     install: { type: "boolean", default: true },
     git: { type: "boolean", default: true },
   },
@@ -65,30 +61,35 @@ if (existsSync(target) && readdirSync(target).length > 0) {
   process.exit(1);
 }
 
-const profile =
-  values.profile ?? (values.yes ? "fullstack" : cancelled(await p.select({ message: "Profile", options: PROFILES })));
-if (!PROFILES.some((x) => x.value === profile && !x.disabled)) {
-  p.cancel(`Profile "${profile}" is not available yet.`);
+const template =
+  values.template ??
+  (values.yes
+    ? TEMPLATES[0]
+    : cancelled(await p.select({ message: "Template", options: TEMPLATES.map((value) => ({ value })) })));
+if (!TEMPLATES.includes(template)) {
+  p.cancel(`Unknown template "${template}". Available: ${TEMPLATES.join(", ")}`);
   process.exit(1);
 }
 
-cpSync(templateDir(profile), target, { recursive: true, filter: (src) => !SKIP.has(basename(src)) });
+cpSync(join(templatesRoot, template), target, { recursive: true, filter: (src) => !SKIP.has(basename(src)) });
 // npm strips .gitignore from published packages, so prepack ships it as _gitignore.
 if (existsSync(join(target, "_gitignore"))) renameSync(join(target, "_gitignore"), join(target, ".gitignore"));
 
 for (const file of ["package.json", "wrangler.jsonc", "README.md"]) {
   const path = join(target, file);
-  writeFileSync(path, readFileSync(path, "utf8").replaceAll("b7-fullstack", name));
+  if (existsSync(path)) writeFileSync(path, readFileSync(path, "utf8").replaceAll(`b7-${template}`, name));
 }
-writeFileSync(
-  join(target, ".dev.vars"),
-  readFileSync(join(target, ".dev.vars.example"), "utf8").replace(
-    /^BETTER_AUTH_SECRET=$/m,
-    `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`,
-  ),
-);
-writeFileSync(join(target, "b7.json"), `${JSON.stringify({ ...CONFIG, profile }, null, 2)}\n`);
-p.log.success(`Created ${name} (${profile})`);
+const example = join(target, ".dev.vars.example");
+if (existsSync(example)) {
+  writeFileSync(
+    join(target, ".dev.vars"),
+    readFileSync(example, "utf8").replace(
+      /^BETTER_AUTH_SECRET=$/m,
+      `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`,
+    ),
+  );
+}
+p.log.success(`Created ${name} (${template})`);
 
 const run = (cmd, args) => {
   try {

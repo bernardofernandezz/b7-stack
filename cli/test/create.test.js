@@ -11,7 +11,7 @@ const create = (dir, ...args) =>
 
 test("scaffolds the fullstack template", () => {
   const app = join(mkdtempSync(join(tmpdir(), "b7-")), "my-app");
-  create(app);
+  create(app, "--template", "fullstack");
 
   assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).name, "my-app");
   const wrangler = readFileSync(join(app, "wrangler.jsonc"), "utf8");
@@ -26,8 +26,8 @@ test("scaffolds the fullstack template", () => {
   for (const skipped of ["node_modules", "dist", ".wrangler", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
 });
 
-test("rejects invalid names and unavailable profiles", () => {
+test("rejects invalid names and unknown templates", () => {
   const base = mkdtempSync(join(tmpdir(), "b7-"));
   assert.throws(() => create(join(base, "My App")));
-  assert.throws(() => create(join(base, "ok"), "--profile", "web"));
+  assert.throws(() => create(join(base, "ok"), "-t", "nope"), (e) => e.stdout.includes("Available: fullstack"));
 });

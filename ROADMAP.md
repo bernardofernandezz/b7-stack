@@ -1,6 +1,6 @@
 # Roadmap
 
-Milestones are ordered by **risk reduction**, not by feature count. Each one ends when its acceptance tests (defined in [architecture-review.md](architecture-review.md#required-acceptance-tests)) pass against a deployed Worker. Later milestones do not start until the earlier ones are green.
+Milestones are ordered by **risk reduction**, not by feature count. Each one ends when its acceptance tests (defined in [architecture-review.md](architecture-review.md#required-acceptance-tests)) pass against a deployed Worker. Later milestones do not start until the earlier ones are green. The executable task list is [RELEASE.md](RELEASE.md), and finished work is recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## M0: Architecture approval
 - The maintainer approves or rejects decisions A1–A11 ([list](architecture-review.md#decisions-requiring-maintainer-approval)).

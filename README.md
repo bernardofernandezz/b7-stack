@@ -66,6 +66,7 @@ The full model, the allowed values per profile and example configurations are in
 | Fullstack reference implementation | [templates/fullstack/](templates/fullstack/README.md) |
 | Architecture review, tests and blockers | [architecture-review.md](architecture-review.md) |
 | Milestones | [ROADMAP.md](ROADMAP.md) |
+| Release checklist and changelog | [RELEASE.md](RELEASE.md) · [CHANGELOG.md](CHANGELOG.md) |
 | Generator (`create-b7`) | [cli/README.md](cli/README.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 

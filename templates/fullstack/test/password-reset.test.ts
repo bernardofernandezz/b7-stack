@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, type MockInstance, vi } fro
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
+import { signUpVerified } from "./helpers";
 
 // A Resend key makes emails go through fetch, which is faked so the test can read the emailed link.
 const env = { ...parseEnv(process.env), RESEND_API_KEY: "re_test_key" };
@@ -17,15 +18,7 @@ beforeEach(() => {
 
 const sentEmails = () => fetch.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
 
-async function signUp(password: string) {
-  const email = `${crypto.randomUUID()}@example.com`;
-  const { headers } = await auth.api.signUpEmail({ body: { name: "Test", email, password }, returnHeaders: true });
-  const cookie = headers
-    .getSetCookie()
-    .map((c) => c.split(";")[0])
-    .join("; ");
-  return { email, headers: new Headers({ cookie }) };
-}
+const signUp = (password: string) => signUpVerified(auth, env.BETTER_AUTH_SECRET, password);
 
 /** Requests a reset and returns the token from the link in the email. */
 async function resetToken(email: string) {

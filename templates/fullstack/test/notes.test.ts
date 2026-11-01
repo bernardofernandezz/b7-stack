@@ -4,6 +4,7 @@ import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
 import { router } from "../src/rpc/router";
+import { signUpVerified } from "./helpers";
 
 const env = parseEnv(process.env);
 const { db, close } = createDb(env.DATABASE_URL);
@@ -12,19 +13,7 @@ afterAll(close);
 
 const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, headers } });
 
-/** Signs up a fresh user through Better Auth and returns request headers carrying its session cookie. */
-async function signUp() {
-  const email = `${crypto.randomUUID()}@example.com`;
-  const { headers } = await auth.api.signUpEmail({
-    body: { name: "Test", email, password: "correct-horse-battery" },
-    returnHeaders: true,
-  });
-  const cookie = headers
-    .getSetCookie()
-    .map((c) => c.split(";")[0])
-    .join("; ");
-  return new Headers({ cookie });
-}
+const signUp = async () => (await signUpVerified(auth, env.BETTER_AUTH_SECRET)).headers;
 
 const rejectsWith = (promise: Promise<unknown>, code: string) =>
   expect(promise).rejects.toSatisfy((e) => e instanceof ORPCError && e.code === code);
@@ -73,6 +62,6 @@ describe("notes procedures", () => {
   it("returns the session from the public session procedure", async () => {
     expect(await clientFor(new Headers()).session()).toBeNull();
     const session = await clientFor(await signUp()).session();
-    expect(session?.user.emailVerified).toBe(false);
+    expect(session?.user.emailVerified).toBe(true); // sign-in requires a verified address
   });
 });

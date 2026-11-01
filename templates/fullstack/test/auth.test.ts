@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
+import { signUpVerified } from "./helpers";
 
 const env = parseEnv(process.env);
 const { db, close } = createDb(env.DATABASE_URL);
@@ -43,5 +44,22 @@ describe("Better Auth rate limiting (database storage, x-forwarded-for)", () => 
       }),
     );
     expect(response.status).toBe(403);
+  });
+});
+
+describe("email verification", () => {
+  it("starts no session at sign-up and refuses sign-in until the address is verified", async () => {
+    const email = `${crypto.randomUUID()}@example.com`;
+    const password = "correct-horse-battery";
+    const signUp = await auth.api.signUpEmail({ body: { name: "Test", email, password } });
+    expect(signUp.token).toBeNull();
+    await expect(auth.api.signInEmail({ body: { email, password } })).rejects.toSatisfy(
+      (e: { body?: { code?: string } }) => e.body?.code === "EMAIL_NOT_VERIFIED",
+    );
+  });
+
+  it("signs in through the verification link", async () => {
+    const { headers } = await signUpVerified(auth, env.BETTER_AUTH_SECRET);
+    expect((await auth.api.getSession({ headers }))?.user.emailVerified).toBe(true);
   });
 });

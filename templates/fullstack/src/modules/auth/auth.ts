@@ -22,12 +22,17 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
+      // Email is configured in this template, so an address must be proven before it can sign in.
+      requireEmailVerification: true,
       sendResetPassword: ({ user, url }) => sendEmail(env, resetPasswordEmail(user.email, user.name, url)),
       // A reset ends every existing session, so a stolen session does not survive the password change.
       revokeSessionsOnPasswordReset: true,
     },
     emailVerification: {
       sendOnSignUp: true,
+      // An unverified sign-in attempt re-sends the link (sign-in is rate-limited).
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
       sendVerificationEmail: ({ user, url }) => sendEmail(env, verificationEmail(user.email, user.name, url)),
     },
     // Database storage, so limits hold across app replicas. Enabled explicitly so dev and tests exercise it.

@@ -17,6 +17,7 @@ function SignIn() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState<string>();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,12 +27,23 @@ function SignIn() {
     setPending(true);
     const { error } =
       mode === "sign-up"
-        ? await authClient.signUp.email({ name: String(form.get("name")), email, password })
-        : await authClient.signIn.email({ email, password });
+        ? await authClient.signUp.email({ name: String(form.get("name")), email, password, callbackURL: "/" })
+        : await authClient.signIn.email({ email, password, callbackURL: "/" });
     setPending(false);
+    // Sign-up never starts a session, and an unverified sign-in gets the link again.
+    if (mode === "sign-up" || error?.code === "EMAIL_NOT_VERIFIED") return setVerifyEmail(email);
     if (error) return setError(error.message ?? "Something went wrong");
     await router.invalidate();
     await navigate({ to: "/" });
+  }
+
+  if (verifyEmail) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">Verify your email</h1>
+        <p className="text-sm text-zinc-600">We sent a link to {verifyEmail}. Open it to finish signing in.</p>
+      </div>
+    );
   }
 
   return (

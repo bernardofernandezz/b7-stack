@@ -71,11 +71,11 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 *Spec for all:* [templates/fullstack/README.md › Known limitations](templates/fullstack/README.md#known-limitations). Each task removes its bullet from that list.
 
-- [x] **3.1 Password reset.**
+- [x] **3.1 Password reset.** (e77dde6)
   - *Spec:* [stacks/fullstack/authentication.md › Sign-in methods](stacks/fullstack/authentication.md#sign-in-methods)
   - *Files:* `templates/fullstack/src/modules/auth/`, a reset route under `src/routes/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* Vitest covers token issue and use (email faked as in `test/email.test.ts`), and an E2E resets a password and signs in with it.
-- [ ] **3.2 Require email verification when email is configured.**
+- [x] **3.2 Require email verification when email is configured.**
   - *Files:* `templates/fullstack/src/modules/auth/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* an unverified user cannot sign in (test), and the E2E flow verifies through the logged email link in dev.
 - [ ] **3.3 No session RPC on every client navigation.**

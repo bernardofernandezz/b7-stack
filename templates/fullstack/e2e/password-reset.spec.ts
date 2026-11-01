@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import pg from "pg";
+import { verificationLink } from "./helpers";
 
 /** The reset token for an address, read from the database because the email itself is not delivered in tests. */
 async function resetToken(email: string) {
@@ -24,6 +25,7 @@ test("forgot password, reset it, sign in with the new one", async ({ page, reque
     headers: { origin: baseURL ?? "" },
   });
   expect(signUp.ok()).toBe(true);
+  await request.get(await verificationLink(email), { maxRedirects: 0 });
 
   // Wait for hydration: before it, buttons are inert SSR markup.
   await page.goto("/forgot-password", { waitUntil: "networkidle" });

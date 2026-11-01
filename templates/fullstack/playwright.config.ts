@@ -9,6 +9,12 @@ const baseURL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",
-  use: { baseURL },
+  use: {
+    baseURL,
+    // One client IP per run, so reruns are not throttled by auth rate limits (3 resets/min). Caddy replaces it.
+    extraHTTPHeaders: {
+      "x-forwarded-for": `198.18.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`,
+    },
+  },
   webServer: process.env.BASE_URL ? undefined : { command: "pnpm run dev", url: baseURL, reuseExistingServer: true },
 });

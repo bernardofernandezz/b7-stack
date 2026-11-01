@@ -22,7 +22,7 @@ pnpm run db:migrate
 pnpm run dev                           # http://localhost:3000
 ```
 
-Without `RESEND_API_KEY`, the dev server prints emails (such as the sign-up verification link) to its log instead of sending them. In a production build, a missing key is an error.
+Without `RESEND_API_KEY`, the dev server prints emails to its log instead of sending them. Sign-in requires a verified address, so open the verification link from that log after signing up. In a production build, a missing key is an error.
 
 | Command | What it does |
 |---------|--------------|
@@ -99,6 +99,7 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 | Revocation is immediate after sign-out (H-T1) | Tested | Vitest |
 | Auth rate limiting, database storage (BA-T2) | Tested locally and in Compose | `test/auth.test.ts`: 429 after 3 sign-ins / 10 s, other IP unaffected. Through Caddy, a forged `X-Forwarded-For` does not bypass the limit (curl: 401 401 401 429 429) |
 | Untrusted `Origin` rejected by Better Auth | Tested | `test/auth.test.ts` |
+| Email verification required: no session at sign-up, unverified sign-in refused (and the link re-sent), the link signs in | Tested locally and in Compose | `test/auth.test.ts`, `e2e/notes.spec.ts` (signs the link with `BETTER_AUTH_SECRET`) |
 | Password reset: email link, single-use token, all sessions revoked, same answer for unknown addresses | Tested locally and in Compose | `test/password-reset.test.ts`, `e2e/password-reset.spec.ts` (reads the token from the database) |
 | Cross-site RPC rejected by CSRF middleware (T-T4) | Tested in a production build | curl with a foreign `Origin` and `Sec-Fetch-Site: cross-site` gives 403. Not automated |
 | Resend `sendEmail()` | Tested with Resend faked at the HTTP boundary | `test/email.test.ts`. **Never sent through the live Resend API** (no key available) |
@@ -121,6 +122,5 @@ None of these are installed. Each adds only what the [feature table](../../docs/
 
 ## Known limitations
 
-- Email verification is sent but not required for sign-in (`requireEmailVerification` is off).
 - The root route's `beforeLoad` calls the `session` procedure on each client navigation (one RPC round trip).
 - The build bundles Kysely's SQLite dialects pulled in by Better Auth. They are unused, but they count toward bundle size.

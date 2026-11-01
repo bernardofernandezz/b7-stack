@@ -16,7 +16,8 @@ At the maintainer's request, B7 Fullstack now runs as a Node.js process in Docke
 | A12, W-1 | **Obsolete.** No Workers CPU limit. Password hashing runs in Node.js |
 | W-2 | **Replaced** by C-T1 |
 | S4, S-T1 | **Simplified.** Stripe's Node SDK verifies signatures natively. S-T1 still runs |
-| BA-T2, D-T2, H-b | **Still required,** against the Compose stack (`--scale app=2` for BA-T2) |
+| BA-T2, D-T2 | **Passed** in Compose on 2 replicas (2026-11-01): see the template's Verification status |
+| H-b | Exercised by B-T4 locally (50 concurrent webhooks); still to confirm against real Stripe latency |
 
 New tests:
 

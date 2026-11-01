@@ -53,7 +53,7 @@ docker compose up -d --build           # postgres → migrate → app → caddy
 | `postgres` | PostgreSQL 17 with a named volume. Published only on `127.0.0.1:5432` |
 | `migrate` | `Dockerfile` target `migrate`: runs `drizzle-kit migrate`, then exits. `app` starts only after it succeeds |
 | `app` | `Dockerfile` target `runtime`: Node.js, production dependencies and the build, served by srvx on :3000 (not published). Health-checked |
-| `caddy` | Reverse proxy on :80/:443. Sets `X-Forwarded-For` to the real client IP, which auth rate limiting uses |
+| `caddy` | Reverse proxy on :80/:443. Sets `X-Forwarded-For` to the real client IP, which auth rate limiting uses. Finds `app` replicas through Docker DNS and round-robins between them (`docker compose up -d --scale app=2`) |
 
 Configuration comes from `.env`:
 
@@ -133,7 +133,9 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 <!-- #endif -->
 | Production build and images | Tested | `vite build`, `docker compose up --build --wait` (all services healthy), runtime image 529 MB |
 | CI workflow | Written, **never run** | `.github/workflows/ci.yml`. Its steps were run by hand |
-| Public host with a domain and HTTPS, real email, load (D-T2) | **Not tested** | Needs a server and a domain (and a Resend key for email) |
+| Replicas: `--scale app=2` behind Caddy, round-robin, auth rate limit shared across replicas (BA-T2) | Tested in Compose | curl through Caddy: requests split 10/10; sign-in attempts on both replicas give 401 401 401 429 429 |
+| Sustained load (D-T2): 50 RPS for 10 min of signed-in `notes.list` on 2 replicas through Caddy | Tested in Compose | `node scripts/load.ts http://localhost 50 600 2`: 30,000 requests, all 200, PostgreSQL connections flat at 3 in all 60 samples |
+| Public host with a domain and HTTPS, real email | **Not tested** | Needs a server and a domain (and a Resend key for email) |
 
 ## Adding optional modules
 

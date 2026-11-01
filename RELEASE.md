@@ -111,7 +111,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
   - *Spec:* [stacks/fullstack/authentication.md › With organizations](stacks/fullstack/authentication.md#with-organizations-optional), [Tenant isolation](stacks/fullstack/authentication.md#tenant-isolation)
   - *Files:* `templates/fullstack/+organizations/` (plugin, `requireMembership` and `requirePermission` in `src/rpc/`, `organization_id` on notes, invitations via Resend, migration)
   - *Done when:* H-T2 and M-T1…M-T4 pass locally, and the generated project's checks pass.
-- [x] **5.2 `billing: stripe` overlay.** needs: 4.1. S-T1, S-T2, S-T3, B-T1…B-T6 pass locally with Stripe faked at `fetch`. The scheduler calls an internal endpoint instead of running a second build.
+- [x] **5.2 `billing: stripe` overlay.** (11f84ea) needs: 4.1. S-T1, S-T2, S-T3, B-T1…B-T6 pass locally with Stripe faked at `fetch`. The scheduler calls an internal endpoint instead of running a second build.
   - *Spec:* [stacks/fullstack/billing.md](stacks/fullstack/billing.md) (tables, Stripe mapping, webhook verification, event processing), decisions A8 and A9
   - *Files:* `templates/fullstack/+billing-stripe/` (adapter implementing `BillingProvider` in `src/modules/billing/`, tables and migration, `src/routes/api/webhooks/stripe.ts`, reconciliation in `src/jobs/`, a `scheduler` Compose service)
   - *Done when:* S-T1 and B-T1…B-T6 pass locally (Stripe faked at the HTTP boundary), and the generated project's checks pass.
@@ -119,7 +119,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 - [ ] **5.4 Deployed billing and load tests.** needs: 5.3
   - *Spec:* S-T2, S-T3, B-T4 in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Done when:* each has a result against the public host in Verification status.
-- [ ] **5.4b Replica and load tests on the Compose stack (agent, local).**
+- [x] **5.4b Replica and load tests on the Compose stack (agent, local).** BA-T2 passed on 2 replicas; D-T2 passed (30,000 requests, connections flat at 3). Found and fixed: Caddy resolved `app` once and sent every request to one replica; it now uses Docker DNS upstreams with round-robin.
   - *Spec:* BA-T2 with `docker compose up --scale app=2`, and D-T2 (sustained load, for example 50 RPS for 10 min) in [the acceptance tests](architecture-review.md#required-acceptance-tests)
   - *Files:* a load script under `templates/fullstack/scripts/`, Verification status
   - *Done when:* rate limits hold across both replicas, and PostgreSQL connections (`pg_stat_activity`) stay flat under load.

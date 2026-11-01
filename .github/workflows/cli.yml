@@ -1,0 +1,38 @@
+name: create-b7
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Packs create-b7 the way npm publishes it, generates a project and runs that project's checks.
+jobs:
+  generated-project:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: b7 }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres -d b7" --health-interval 2s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.16.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: lts/* }
+      - run: pnpm install && pnpm test
+        working-directory: cli
+      - run: npm pack
+        working-directory: cli
+      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git
+        working-directory: ${{ runner.temp }}
+      - name: Check generated project
+        working-directory: ${{ runner.temp }}/demo-app
+        run: |
+          pnpm run typecheck
+          pnpm run lint
+          pnpm run db:migrate
+          pnpm run test
+          pnpm run build
+          pnpm exec playwright install --with-deps chromium
+          pnpm run test:e2e

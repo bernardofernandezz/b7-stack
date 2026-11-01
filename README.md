@@ -4,9 +4,11 @@ B7 is an opinionated, modular ecosystem for building modern software. It is a se
 
 B7 tries to make good architectural decisions easy, without hiding complexity behind new abstractions. It follows the spirit of [T3 Stack](https://create.t3.gg/) but covers more than one kind of project: web apps, APIs, system tools, machine learning and SaaS products.
 
-> Status: **v0.2 (proposed).** The B7 Fullstack reference implementation lives in [templates/fullstack](templates/fullstack/README.md). It runs locally and builds for Workers, but it is **not production-ready** until the [release blockers](architecture-review.md#release-blockers) pass on a deployed Worker. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
->
-> Earlier status: **v0.1, documentation-first.** No generator or runnable templates exist yet. The [configuration model](docs/configuration-model.md) is the contract the future `create-b7` CLI will implement. See [cli/](cli/README.md).
+```sh
+npm create b7@latest my-app
+```
+
+> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)). It runs locally and builds for Workers, but it is **not production-ready** until the [release blockers](architecture-review.md#release-blockers) pass on a deployed Worker. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
 
 ## Principles
 
@@ -64,7 +66,7 @@ The full model, the allowed values per profile and example configurations are in
 | Fullstack reference implementation | [templates/fullstack/](templates/fullstack/README.md) |
 | Architecture review, tests and blockers | [architecture-review.md](architecture-review.md) |
 | Milestones | [ROADMAP.md](ROADMAP.md) |
-| Future generator | [cli/README.md](cli/README.md) |
+| Generator (`create-b7`) | [cli/README.md](cli/README.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## License

@@ -14,6 +14,10 @@ A throwaway Worker, not the reference implementation.
 - PostgreSQL through one cache-disabled Hyperdrive binding, with a per-request `pg` client.
 - **Exit:** T-T1…T-T5, D-T1, D-T2, BA-T1, W-1, W-2. Decide A12.
 
+## M1.5: `create-b7` preview
+- A CLI that generates `templates/fullstack` (one configuration), writes `b7.json` and is checked in CI by generating a project and running its checks. Done: [cli/](cli/README.md).
+- **Exit:** published to npm as a preview after M1's deployed smoke test passes.
+
 ## M2: Identity and tenancy
 - Better Auth email + password with database sessions and database rate limiting.
 - Organizations plugin, the `requireSession` → `requireMembership` → `requirePermission` chain, and one tenant-scoped domain module.
@@ -32,8 +36,8 @@ A throwaway Worker, not the reference implementation.
 ## M5: AbacatePay (leaves EXPERIMENTAL only on success)
 - Capture real payloads (A-T3), build the adapter, and run A-T1…A-T3 plus B-T1…B-T6 against AbacatePay.
 
-## M6: Machine-readable configuration and `create-b7`
-- A schema for [the configuration model](docs/configuration-model.md) with one test per rule, then a CLI that generates M4 from `{ "profile": "fullstack", "options": … }`.
+## M6: Configurable `create-b7`
+- A schema for [the configuration model](docs/configuration-model.md) with one test per rule, then options and `b7 add` in the CLI from M1.5.
 
 ## Later (unscheduled; each needs a documented requirement)
 Optional R2, Queues, Turnstile, Sentry and `publicApi` modules. Templates for the other profiles. Revisiting deferred items: a cached Hyperdrive binding, KV, Durable Objects, passkeys, teams, Stripe thin events, and auth for Web and API.

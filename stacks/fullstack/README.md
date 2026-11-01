@@ -1,4 +1,4 @@
-# B7 Fullstack: the SaaS and startup profile (v0.2, proposed)
+# B7 Fullstack: the SaaS and startup profile (v0.2)
 
 **Purpose:** a production-oriented foundation for SaaS products. This is the most opinionated B7 profile: **TypeScript only** (Go is never offered), **one Node.js app in Docker Compose**, **one PostgreSQL database**, and a modular monolith inside it.
 

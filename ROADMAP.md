@@ -2,8 +2,8 @@
 
 Milestones are ordered by **risk reduction**, not by feature count. Each one ends when its acceptance tests (defined in [architecture-review.md](architecture-review.md#required-acceptance-tests)) pass against a deployed Worker. Later milestones do not start until the earlier ones are green. The executable task list is [RELEASE.md](RELEASE.md), and finished work is recorded in [CHANGELOG.md](CHANGELOG.md).
 
-## M0: Architecture approval
-- The maintainer approves or rejects decisions A1–A11 ([list](architecture-review.md#decisions-requiring-maintainer-approval)).
+## M0: Architecture approval (done 2026-11-01)
+- The maintainer approved A1–A11 and A13 ([list](architecture-review.md#decisions-requiring-maintainer-approval)).
 - **Exit:** the docs no longer say "proposed".
 
 **Current state (2026-10-31).** [templates/fullstack](templates/fullstack/README.md) implements M1's composition (without the webhook route and `src/server.ts`, which arrive with billing), M2's email + password and Resend parts (organizations not yet), the provider-neutral M3 billing contract (no adapter), and CI. Its [verification status](templates/fullstack/README.md#verification-status) lists what passed locally. No milestone exits until its tests pass on a deployed Worker.

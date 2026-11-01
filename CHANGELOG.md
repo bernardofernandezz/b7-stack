@@ -26,6 +26,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - The CI matrix covers configuration 2 (organizations + email + Stripe) and each option on its own (4.4).
 
 ### Changed
+- Decisions A1–A11 and A13 approved; the docs no longer mark them "proposed" (1.1, 1.2).
 - The template's migrations are squashed into one `0000_init` (nothing was deployed yet) (5.1).
 - Through Caddy, CI runs only the smoke, notes and navigation E2E flows, because auth rate limits are real there; the full suite runs against the dev server (5.1).
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

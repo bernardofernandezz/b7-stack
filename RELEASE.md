@@ -34,7 +34,7 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 0: Hygiene
 
-- [~] **0.1 HUMAN: run CI for the first time.** blocked: needs `git push` and a PR. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
+- [~] **0.1 HUMAN: run CI for the first time.** Authorized 2026-11-01; waiting for the CI result. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
   - *Done when:* the `create-b7` workflow is green. Any failure becomes a new task below this one.
 - [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.** (2fd87a0)
   - *Spec:* [cli/README.md](cli/README.md)
@@ -46,10 +46,10 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 ## Phase 1: Decisions
 
-- [~] **1.1 HUMAN: approve or reject A1–A11 and A13.** blocked: maintainer decision.
+- [x] **1.1 HUMAN: approve or reject A1–A11 and A13.** Approved by the maintainer, 2026-11-01.
   - *Spec:* [architecture-review.md › Decisions requiring maintainer approval](architecture-review.md#decisions-requiring-maintainer-approval)
   - *Done when:* each decision is marked approved or rejected in that table.
-- [~] **1.2 Remove "proposed" from the approved decisions.** blocked: waits for 1.1. needs: 1.1
+- [x] **1.2 Remove "proposed" from the approved decisions.** needs: 1.1. ADR-014, ADR-020 and ADR-026 stay Proposed: they were not part of the approval.
   - *Files:* every doc that `grep -rli proposed --include=*.md .` lists (README, configuration model, technology decisions, `stacks/fullstack/*`, `ROADMAP.md`, the review). For a rejected decision, restore the earlier text from git history.
   - *Done when:* the grep only matches decisions still pending (none, if all were decided), and M0 in `ROADMAP.md` is marked done.
 

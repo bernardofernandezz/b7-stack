@@ -1,4 +1,4 @@
-# Configuration Model (v0.2, proposed)
+# Configuration Model (v0.2)
 
 This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](../cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](../architecture-review.md#decisions-requiring-maintainer-approval).
 

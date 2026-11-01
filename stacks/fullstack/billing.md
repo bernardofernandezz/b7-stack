@@ -1,4 +1,4 @@
-# Billing (v0.2, proposed)
+# Billing (v0.2)
 
 Billing is **OPTIONAL**: `billing = none | stripe | abacatepay`. Only the selected provider's code and env vars are generated. **Stripe is the reference integration. AbacatePay is EXPERIMENTAL** (`A7`) because of the limitations listed below. Decision IDs and evidence are in [architecture-review.md](../../architecture-review.md).
 

@@ -1,4 +1,4 @@
-# Authentication, Authorization and Tenant Isolation (v0.2, proposed)
+# Authentication, Authorization and Tenant Isolation (v0.2)
 
 Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](../../architecture-review.md).
 

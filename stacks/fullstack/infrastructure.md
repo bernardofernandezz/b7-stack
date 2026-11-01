@@ -1,4 +1,4 @@
-# B7 Fullstack Infrastructure (v0.2, proposed)
+# B7 Fullstack Infrastructure (v0.2)
 
 The smallest viable deployment is **one host with Docker, running one Compose project**: PostgreSQL, a one-shot migration job, the app and Caddy. Every other service is added only by a selected feature (see the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds)). Why Docker replaced Cloudflare Workers is in [ADR-013](../../docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target).
 

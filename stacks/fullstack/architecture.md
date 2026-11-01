@@ -1,6 +1,6 @@
-# B7 Fullstack Architecture (v0.2, proposed)
+# B7 Fullstack Architecture (v0.2)
 
-> **Status: proposed, pending maintainer approval.** The v0.2 changes are tagged with decision IDs (`A1`–`A12`), which are listed in [architecture-review.md](../../architecture-review.md#decisions-requiring-maintainer-approval). The evidence behind each decision is also in that review. v0.1 is in git history.
+> **Status: approved (2026-11-01).** The v0.2 changes are tagged with decision IDs (`A1`–`A13`), which are listed in [architecture-review.md](../../architecture-review.md#decisions-requiring-maintainer-approval). The evidence behind each decision is also in that review. v0.1 is in git history.
 
 ## Summary
 

@@ -2,15 +2,43 @@
   "name": "create-b7",
   "version": "0.2.0-preview.0",
   "description": "Create a B7 Stack project",
+  "keywords": [
+    "create",
+    "scaffold",
+    "template",
+    "tanstack-start",
+    "orpc",
+    "better-auth",
+    "drizzle",
+    "postgresql",
+    "docker",
+    "saas",
+    "b7"
+  ],
+  "homepage": "https://github.com/bernardofernandezz/b7-stack/tree/main/cli#readme",
+  "bugs": {
+    "url": "https://github.com/bernardofernandezz/b7-stack/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bernardofernandezz/b7-stack.git",
+    "directory": "cli"
+  },
   "type": "module",
-  "bin": { "create-b7": "index.js" },
-  "files": ["index.js", "template"],
-  "engines": { "node": ">=22.12" },
-  "repository": { "type": "git", "url": "git+https://github.com/bernardofernandezz/b7-stack.git", "directory": "cli" },
+  "bin": {
+    "create-b7": "index.js"
+  },
+  "files": [
+    "index.js",
+    "template"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "prepack": "node scripts/copy-template.js",
-    "postpack": "rm -rf template",
+    "postpack": "rm -rf template LICENSE",
     "test": "node --test"
   },
   "dependencies": {

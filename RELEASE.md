@@ -36,11 +36,11 @@ AbacatePay, other profiles and the remaining options come after 1.0 ([backlog](#
 
 - [~] **0.1 HUMAN: run CI for the first time.** blocked: needs `git push` and a PR. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
   - *Done when:* the `create-b7` workflow is green. Any failure becomes a new task below this one.
-- [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.**
+- [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.** (2fd87a0)
   - *Spec:* [cli/README.md](cli/README.md)
   - *Files:* `cli/index.js`, `cli/test/create.test.js`, `cli/README.md`
   - *Done when:* `node cli/index.js --help` lists every flag and the available templates. `--version` prints `cli/package.json` `version`. When `pnpm` is not on `PATH`, the CLI says how to install it. `pnpm test` in `cli/` covers `--help` and `--version`.
-- [ ] **0.3 CLI package metadata.**
+- [x] **0.3 CLI package metadata.**
   - *Files:* `cli/package.json`, `cli/scripts/copy-template.js`
   - *Done when:* `npm pack` in `cli/` contains `LICENSE` and `README.md`, and `package.json` has `keywords`, `homepage` and `bugs`.
 

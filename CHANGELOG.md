@@ -11,6 +11,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - Docker target for B7 Fullstack: a multi-target `Dockerfile` (`migrate`, `runtime`), `compose.yaml` (`postgres` → `migrate` → `app` → `caddy`) and a `Caddyfile` with automatic HTTPS for a public `APP_URL` (2.1).
 - CI runs the generated project's Compose stack and E2E through Caddy (2.1).
 - `create-b7 --help` and `--version`; a clear message when pnpm is missing (0.2).
+- The `create-b7` package ships `LICENSE` and has `keywords`, `homepage` and `bugs` (0.3).
 
 ### Changed
 - **Breaking:** B7 Fullstack runs on Node.js in Docker Compose instead of Cloudflare Workers (ADR-013). Hyperdrive, Wrangler and the Workers test pool are removed; the app keeps one `pg` pool and one Better Auth instance per process, and srvx serves the build (2.1).

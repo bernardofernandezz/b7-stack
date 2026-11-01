@@ -14,7 +14,7 @@
 - `strict: true`. No `any` without a comment that explains why.
 - Format and lint with Biome, or ESLint + Prettier. Pick one per repository, not both.
 - Zod schemas are the source of truth for request and response shapes. Infer types from them, and do not duplicate them by hand.
-- Only Web-standard APIs in code that may run on Workers. Node built-ins only where `nodejs_compat` supports them ([Workers Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)).
+- Prefer Web-standard APIs (`Request`, `fetch`, Web Crypto) in application code. In code that may run on Workers (Web, API), use Node built-ins only where `nodejs_compat` supports them ([Workers Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)).
 - Use pnpm for scripts and package management, pinned through `packageManager` in `package.json`. Commit `pnpm-lock.yaml`. Allow dependency build scripts only by name (`allowBuilds` in `pnpm-workspace.yaml`), and keep pnpm's minimum release age on.
 
 ## Go

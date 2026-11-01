@@ -5,6 +5,27 @@
 **Scope:** narrow B7 Fullstack to the smallest production-feasible architecture, re-verify every critical claim, and define what blocks the first reference implementation.
 **Nothing here is executable evidence.** Items marked VERIFIED are confirmed by vendor documentation only. **No part of B7 is production-ready until the acceptance tests below pass against a deployed Worker.**
 
+## Target change: Docker Compose replaces Cloudflare Workers (2026-11-01)
+
+At the maintainer's request, B7 Fullstack now runs as a Node.js process in Docker Compose behind Caddy ([ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Everything below that is about Workers, Hyperdrive or Wrangler is kept as history. Its effect on this review:
+
+| Item | Status after the change |
+|------|-------------------------|
+| A4 (cache-disabled Hyperdrive), H-a, D-T1, BA-T1, S2 | **Obsolete.** There is no Hyperdrive and no per-request client or auth instance: one pool and one Better Auth instance per process |
+| A9, T-T2, S1 | **Replaced.** Reconciliation runs in a `scheduler` Compose service, so no custom Worker entry exists |
+| A12, W-1 | **Obsolete.** No Workers CPU limit. Password hashing runs in Node.js |
+| W-2 | **Replaced** by C-T1 |
+| S4, S-T1 | **Simplified.** Stripe's Node SDK verifies signatures natively. S-T1 still runs |
+| BA-T2, D-T2, H-b | **Still required,** against the Compose stack (`--scale app=2` for BA-T2) |
+
+New tests:
+
+| ID | Test | Pass condition | Status (2026-11-01) |
+|----|------|----------------|---------------------|
+| C-T1 | `docker compose up --build --wait`, then Playwright smoke and notes E2E through Caddy | All services healthy, E2E green | **Passed** locally, for the template and for a project generated from the packed CLI |
+| C-T2 | Sign-in attempts through Caddy, each with a different forged `X-Forwarded-For` | Rate limit still applies (429 after the limit) | **Passed** locally (401 401 401 429 429) |
+| C-T3 | `APP_URL=https://<domain>` on a public host | Caddy obtains a certificate, smoke test green over HTTPS, cookies are `Secure` | Not run: needs a host and a domain |
+
 ## Evidence labels
 
 | Label | Meaning |
@@ -185,15 +206,15 @@ All tests run against a **deployed** Worker with a real Hyperdrive binding, unle
 
 ## Release blockers
 
-The first reference implementation may be **built** now. It must not be called **production-ready** until all of these are met:
+Updated for the Docker target. The first reference implementation may be **built** now. It must not be called **production-ready** until all of these are met:
 
-1. **T-T1…T-T5.** The Start-only composition is proven on a deployed Worker (A1, A2).
+1. **T-T1, T-T3…T-T5, C-T1.** The Start composition works in the Compose stack (A1, A2).
 2. **H-T1, H-T2, M-T1…M-T3.** Revocation and membership removal take effect immediately, and tenant isolation holds.
-3. **W-1 and A12.** The plan requirement is measured and stated in the docs.
-4. **BA-T1, BA-T2, D-T1, D-T2.** Auth instance cost, rate limiting, and connection lifecycle are acceptable.
+3. **C-T2, C-T3.** The proxy is the only source of the client IP, and HTTPS works on a public host.
+4. **BA-T2, D-T2.** Rate limiting holds across replicas, and the pool does not grow under load.
 5. **S-T1…S-T3, B-T1…B-T6.** Stripe billing is correct under duplicates, reordering, failure and reconciliation.
 6. **A-T1…A-T3.** Required only for AbacatePay to leave EXPERIMENTAL. It does not block a Stripe-only release.
-7. **W-2.** The post-deploy smoke test is wired into CI.
+7. **C-T1 in CI.** The Compose stack E2E runs on every pull request.
 
 ---
 
@@ -214,4 +235,5 @@ These changes are written into the v0.2 documents as **proposed**. None is final
 | A9 | Cron derived from billing | v0.1 made cron optional |
 | A10 | KV and DO deferred, passkeys experimental, teams and dynamic roles deferred | v0.1 offered them |
 | A11 | Reduced configuration model. Auth deferred in Web and API. SQLite (TS) deferred | v0.1 had 18 dimensions |
-| A12 | Plan requirement decided after W-1 | Pending measurement |
+| A12 | Plan requirement decided after W-1 | Obsolete after A13 |
+| A13 | Docker Compose (Node.js + Caddy) replaces Cloudflare Workers as the Fullstack target ([ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)) | v0.1 and v0.2 targeted Workers only |

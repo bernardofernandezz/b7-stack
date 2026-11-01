@@ -6,7 +6,7 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 
 ### ADR-001: TypeScript only, with pnpm as local tooling
 **Status:** Accepted.
-**Decision:** Fullstack uses TypeScript exclusively. pnpm is used for installs and scripts (Node.js runs the tooling), and production runs on the Workers runtime.
+**Decision:** Fullstack uses TypeScript exclusively. pnpm is used for installs and scripts, and Node.js runs both the tooling and production ([ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)).
 **Why:** one language from schema to UI. pnpm's strict `node_modules`, its build-script allowlist and its minimum release age reduce supply-chain risk, and it is the package manager with the widest CI and tooling support.
 **Rejected:** Go in Fullstack, because it would mean two languages in one deployable unit. Go services belong in B7 API.
 
@@ -32,7 +32,7 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 **Rejected:** Clerk and Auth0 (hosted, paid at scale, user data off-platform). A secondary-storage session store on KV (eventually consistent).
 
 ### ADR-005: PostgreSQL, Drizzle and `pg`, through one cache-disabled Hyperdrive binding [A3, A4]
-**Status:** Proposed. The driver choice is Accepted.
+**Status:** Proposed. The driver choice is Accepted. **The Hyperdrive part is superseded by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)**: PostgreSQL, Drizzle and `pg` stay, with one process-wide pool instead of a per-request client.
 **Decision:** PostgreSQL is the only Fullstack database. Use Drizzle with node-postgres `pg` ≥ 8.16.3, and one `pg` client per request. The single Hyperdrive binding is created with caching disabled.
 **Why:** Cloudflare documents that Drizzle + Postgres.js over Hyperdrive is not supported ([Hyperdrive + Drizzle](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/)), and it lists `pg` 8.16.3 as the minimum ([node-postgres](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/)). Hyperdrive's cache is on by default and **not invalidated by writes**. Cloudflare itself recommends a cache-disabled configuration for authentication, permissions and billing reads ([query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)).
 **Trade-off:** no free query caching. A second cache-enabled binding is deferred until it is measured to be needed.
@@ -46,13 +46,13 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 **Rejected:** a generic payment framework. The Better Auth Stripe plugin (it would put two billing paths in one product). Event-sourced state from webhook payloads.
 
 ### ADR-007: Cloudflare Workers as the only Fullstack target
-**Status:** Accepted.
+**Status:** Superseded by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target).
 **Decision:** one Worker, deployed with Wrangler from GitHub Actions.
 **Why:** no servers to manage, bindings for Hyperdrive, R2, Queues and Cron, and a Free plan that covers Hyperdrive and Queues ([Hyperdrive pricing](https://developers.cloudflare.com/hyperdrive/platform/pricing/), [Queues pricing](https://developers.cloudflare.com/queues/platform/pricing/)).
 **Trade-off (lock-in):** bindings, Wrangler config and the module export shape are Cloudflare-specific. Application code stays on Web standards (`Request`, `fetch`, Web Crypto), so moving to containers means swapping bindings for network clients. The Free plan's 10 ms CPU limit may not fit password hashing ([limits](https://developers.cloudflare.com/workers/platform/limits/)). That is unverified [A12].
 
 ### ADR-008: Optional Cloudflare services only when a feature needs them, with KV and Durable Objects deferred [A9, A10]
-**Status:** Proposed.
+**Status:** Proposed. **Amended by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)**: optional services are now Compose services or plain HTTP APIs, and KV and Durable Objects no longer apply.
 **Decision:** R2 (storage), Queues (queues) and Turnstile are opt-in. Cron is derived from billing. KV and Durable Objects are not offered in v0.2.
 **Why:** no core feature needs KV or DOs, and KV's eventual consistency makes it unsafe for auth, rate limits and billing.
 
@@ -60,14 +60,21 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 **Status:** Accepted. Utility CSS with no runtime, unstyled accessible primitives, and tree-shakable icons. Base UI publishes as `@base-ui/react` (the earlier package name is deprecated on npm).
 **Rejected:** component libraries with their own theme runtime.
 
-### ADR-010: Vitest (Workers pool), Playwright, and a mandatory post-deploy smoke test
-**Status:** Accepted, with an amendment: the smoke test is mandatory because the Vitest Workers pool injects `nodejs_compat` ([Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)).
+### ADR-010: Vitest, Playwright, and a mandatory post-deploy smoke test
+**Status:** Accepted, amended by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target): Vitest runs in Node (the Workers pool is gone). The smoke test stays mandatory and runs against the full Compose stack through Caddy, because unit tests do not exercise the images, migrations or the proxy.
 
 ### ADR-011: Resend for email behind a single `sendEmail()`
-**Status:** Accepted. Resend documents Workers support. B7 uses `html`/`text`, not the Node-only `react` option ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)).
+**Status:** Accepted. B7 uses `html`/`text` rather than the `react` option, which keeps templates free of a rendering dependency.
 
 ### ADR-012: Observability with Workers Observability by default and Sentry optional
-**Status:** Accepted. OpenTelemetry export is deferred in Fullstack.
+**Status:** Amended by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target): logs go to stdout and are read with `docker compose logs` (or any Docker log driver). Sentry stays optional. OpenTelemetry export is deferred in Fullstack.
+
+### ADR-013: Docker Compose replaces Cloudflare Workers as the Fullstack target
+**Status:** Proposed (maintainer request, 2026-11-01).
+**Decision:** the generated project runs as a Node.js process in Docker. One `Dockerfile` has a `migrate` target (Drizzle migrations, then exit) and a `runtime` target (Node.js, production dependencies and the build, served by [srvx](https://srvx.h3.dev/)). `compose.yaml` runs `postgres` → `migrate` → `app` → `caddy`. Caddy terminates TLS (automatic Let's Encrypt for a public `APP_URL`) and is the only service that sets `X-Forwarded-For`, which Better Auth's rate limiter reads. Scheduled jobs (billing reconciliation) run as a Compose service from the same image with a different command.
+**Why:** one artifact that runs the same on a laptop, a VPS or any container platform, with no vendor account needed to try or deploy it. A long-lived process keeps one connection pool, so Hyperdrive, the per-request client and the "query after the pool closed" limitation all disappear. The Free-plan CPU question [A12] no longer applies.
+**Trade-off:** you run a server: OS updates, backups of the `pgdata` volume, and capacity are yours. No edge distribution or scale-to-zero. Horizontal scaling means more `app` replicas behind Caddy, all sharing PostgreSQL (rate limits already live in the database).
+**Rejected:** Nitro's Node preset (still a release candidate at the time of writing). Publishing the app container directly without a proxy (a client could forge `X-Forwarded-For` and bypass rate limits). Keeping Workers as an alternative target (two runtimes double the test matrix).
 
 ## Other profiles
 
@@ -85,7 +92,7 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 
 | Alternative | Reason |
 |-------------|--------|
-| Next.js | Its server model and defaults are tied to its own platform assumptions. B7 prefers TanStack Start's explicit routing and documented Workers deployment |
+| Next.js | Its server model and defaults are tied to its own platform assumptions. B7 prefers TanStack Start's explicit routing, which builds to a plain fetch handler served by Node.js |
 | Redis | Not offered. Use PostgreSQL first. On containers, add it by hand only with a documented reason |
 | Elysia, Express, Fastify | Bun-centric or Node-centric. Hono covers B7 API on every target |
 | SQLite (TS) and D1 | Deferred everywhere in v0.2 to keep one data model per language |

@@ -1,11 +1,11 @@
-import { env } from "cloudflare:workers";
 import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
 import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
 
-const { db, close } = createDb(env.HYPERDRIVE.connectionString);
-const auth = createAuth({ db, env: parseEnv(env) });
+const env = parseEnv(process.env);
+const { db, close } = createDb(env.DATABASE_URL);
+const auth = createAuth({ db, env });
 afterAll(close);
 
 // A fresh address per test run (198.18.0.0/15 is reserved for benchmarking), so reruns don't share buckets.
@@ -15,12 +15,12 @@ const signIn = (ip: string) =>
   auth.handler(
     new Request("http://localhost:3000/api/auth/sign-in/email", {
       method: "POST",
-      headers: { "content-type": "application/json", origin: "http://localhost:3000", "cf-connecting-ip": ip },
+      headers: { "content-type": "application/json", origin: "http://localhost:3000", "x-forwarded-for": ip },
       body: JSON.stringify({ email: "nobody@example.com", password: "wrong-password" }),
     }),
   );
 
-describe("Better Auth rate limiting (database storage, cf-connecting-ip)", () => {
+describe("Better Auth rate limiting (database storage, x-forwarded-for)", () => {
   it("limits sign-in attempts per client IP", async () => {
     const ip = randomIp();
     const statuses = [];
@@ -37,7 +37,7 @@ describe("Better Auth rate limiting (database storage, cf-connecting-ip)", () =>
           "content-type": "application/json",
           origin: "https://evil.example",
           cookie: "x=1",
-          "cf-connecting-ip": randomIp(),
+          "x-forwarded-for": randomIp(),
         },
         body: JSON.stringify({ email: "nobody@example.com", password: "wrong-password" }),
       }),

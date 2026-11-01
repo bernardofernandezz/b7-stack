@@ -2,7 +2,7 @@
 import { cpSync, existsSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 
-const SKIP = new Set(["node_modules", "dist", ".wrangler", ".tanstack", ".dev.vars", "test-results", "playwright-report"]);
+const SKIP = new Set(["node_modules", "dist", ".tanstack", ".env", "test-results", "playwright-report"]);
 const root = join(import.meta.dirname, "..");
 const out = join(root, "template");
 

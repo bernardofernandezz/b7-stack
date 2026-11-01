@@ -1,4 +1,3 @@
-import { env } from "cloudflare:workers";
 import { createRouterClient, ORPCError } from "@orpc/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "../src/db/client";
@@ -6,8 +5,9 @@ import { parseEnv } from "../src/env";
 import { createAuth } from "../src/modules/auth/auth";
 import { router } from "../src/rpc/router";
 
-const { db, close } = createDb(env.HYPERDRIVE.connectionString);
-const auth = createAuth({ db, env: parseEnv(env) });
+const env = parseEnv(process.env);
+const { db, close } = createDb(env.DATABASE_URL);
+const auth = createAuth({ db, env });
 afterAll(close);
 
 const clientFor = (headers: Headers) => createRouterClient(router, { context: { db, auth, headers } });

@@ -29,8 +29,8 @@ type FullstackOptions = {
   oauthProviders: string[];                    // default []
   billing: "none" | "stripe" | "abacatepay";   // default "none"; abacatepay is EXPERIMENTAL
   email: "none" | "resend";                    // default "none"
-  storage: "none" | "r2";                      // default "none"
-  queues: boolean;                             // default false
+  storage: "none" | "s3";                      // default "none"; any S3-compatible service (MinIO, R2, S3)
+  queues: boolean;                             // default false; a `worker` Compose service
   publicApi: boolean;                          // default false: oRPC OpenAPIHandler at /api/v1
   turnstile: boolean;                          // default false
   sentry: boolean;                             // default false
@@ -61,7 +61,7 @@ type ApiGoOptions = {
 | Dimension | Status | Value / rule |
 |-----------|--------|--------------|
 | Language | CORE | TypeScript. **Go is never offered** |
-| Runtime / target | CORE | Cloudflare Workers (Wrangler). pnpm on Node.js for local tooling |
+| Runtime / target | CORE | Node.js in Docker, served by srvx. Docker Compose runs `postgres`, `migrate`, `app` and `caddy` ([ADR-013](technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). pnpm for local tooling |
 | Frontend | CORE | React, TanStack Start, TanStack Router, Tailwind CSS, Base UI, Lucide |
 | HTTP routing | CORE | TanStack Start server routes (`A1`) |
 | App RPC | CORE | oRPC + Zod, with an in-process client for SSR (`A2`) |
@@ -70,8 +70,9 @@ type ApiGoOptions = {
 | Server functions for business logic | **DEFERRED** (`A2`) | — |
 | Database | CORE | PostgreSQL |
 | Data access | CORE | Drizzle + `pg` |
-| Hyperdrive | CORE | One binding, `HYPERDRIVE`, **caching disabled** (`A4`) |
-| Cache-enabled Hyperdrive binding | **DEFERRED** | Requires a measured, named, staleness-tolerant read path |
+| Connection pool | CORE | One `pg` pool per process (`DATABASE_POOL_MAX`, default 10) |
+| Reverse proxy | CORE | Caddy: TLS (automatic for a public `APP_URL`) and the only source of `X-Forwarded-For` |
+| Query cache | **DEFERRED** | Requires a measured, named, staleness-tolerant read path |
 | D1 | **DEFERRED** in Fullstack (`A3`) | — |
 | Authentication | CORE | Better Auth, email + password, database sessions (`A5`) |
 | Organizations | OPTIONAL | `organizations` |
@@ -79,37 +80,35 @@ type ApiGoOptions = {
 | Passkeys | EXPERIMENTAL | `passkeys` |
 | Teams, dynamic roles | **DEFERRED** | — |
 | Billing | OPTIONAL | `billing`. Stripe is the reference, and AbacatePay is EXPERIMENTAL (`A7`) |
-| Cron Triggers | DERIVED | Enabled when `billing ≠ none` (reconciliation, `A9`) |
-| Custom `src/server.ts` | DERIVED | Present when cron or queues are enabled |
+| Scheduler service | DERIVED | A `scheduler` Compose service from the app image, enabled when `billing ≠ none` (reconciliation, `A9`) |
 | Email | OPTIONAL | `email` |
-| Storage | OPTIONAL | `storage` (R2) |
+| Storage | OPTIONAL | `storage` (S3-compatible) |
 | Queues | OPTIONAL | `queues` |
 | Transactional outbox | **DEFERRED** | Until a billing or domain side effect needs it ([billing](../stacks/fullstack/billing.md#transactional-outbox-deferred)) |
-| KV, Durable Objects | **DEFERRED** (`A10`) | No core feature needs them |
 | Turnstile | OPTIONAL | `turnstile` |
-| Observability | CORE | Workers Observability |
+| Observability | CORE | Logs to stdout (`docker compose logs`) |
 | Sentry | OPTIONAL | `sentry` |
 | OpenTelemetry export | **DEFERRED** in Fullstack | — |
-| Testing | CORE | Vitest (Workers pool) + Playwright |
-| CI/CD | CORE | GitHub Actions: check, migrate, deploy, smoke test |
+| Testing | CORE | Vitest (Node) + Playwright, including E2E against the Compose stack |
+| CI/CD | CORE | GitHub Actions: check, migrate, test, build images, E2E against the Compose stack |
 
 ### Fullstack features: what each one adds
 
 | Feature | Packages / config | Env vars and bindings *(secret)* | External service |
 |---------|-------------------|-------------------------------|------------------|
-| core | `@tanstack/react-start`, `@tanstack/react-router`, `@tanstack/react-query`, `@tanstack/react-router-ssr-query`, `react`, `react-dom`, `@cloudflare/vite-plugin`, `@orpc/server`, `@orpc/client`, `@orpc/tanstack-query`, `zod`, `better-auth`, `drizzle-orm`, `drizzle-kit`, `pg`, `tailwindcss`, `@base-ui/react`, `lucide-react`, `vitest`, `@cloudflare/vitest-plugin`, `@playwright/test`, `@biomejs/biome`. Wrangler: `nodejs_compat`, `hyperdrive`, `observability` | `HYPERDRIVE` (binding), `DATABASE_URL` *(CI only, migrations)*, `BETTER_AUTH_SECRET` *(secret)*, `BETTER_AUTH_URL`. Local dev: `hyperdrive[].localConnectionString` in Wrangler (or `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`) | A PostgreSQL host, a Cloudflare account |
+| core | `@tanstack/react-start`, `@tanstack/react-router`, `@tanstack/react-query`, `@tanstack/react-router-ssr-query`, `react`, `react-dom`, `srvx`, `@orpc/server`, `@orpc/client`, `@orpc/tanstack-query`, `zod`, `better-auth`, `drizzle-orm`, `drizzle-kit`, `pg`, `tailwindcss`, `@base-ui/react`, `lucide-react`, `vitest`, `@playwright/test`, `@biomejs/biome`. `Dockerfile` (`migrate`, `runtime`), `compose.yaml`, `Caddyfile` | `DATABASE_URL`, `POSTGRES_PASSWORD` *(secret)*, `BETTER_AUTH_SECRET` *(secret)*, `BETTER_AUTH_URL`, `APP_URL` | A host with Docker |
 | `organizations` | Better Auth `organization` plugin, `requireMembership` and `requirePermission` middleware | — | — |
 | `oauthProviders[p]` | provider config | `<P>_CLIENT_ID`, `<P>_CLIENT_SECRET` *(secret)* | The OAuth provider |
 | `passkeys` | Better Auth passkey plugin | — | — |
-| `billing: stripe` | `stripe`, `modules/billing` (Stripe adapter), webhook route, cron | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)* | Stripe |
-| `billing: abacatepay` | `modules/billing` (AbacatePay adapter, `fetch`), webhook route, cron | `ABACATEPAY_API_KEY` *(secret)*, `ABACATEPAY_WEBHOOK_SECRET` *(secret)* | AbacatePay |
+| `billing: stripe` | `stripe`, `modules/billing` (Stripe adapter), webhook route, `scheduler` service | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)* | Stripe |
+| `billing: abacatepay` | `modules/billing` (AbacatePay adapter, `fetch`), webhook route, `scheduler` service | `ABACATEPAY_API_KEY` *(secret)*, `ABACATEPAY_WEBHOOK_SECRET` *(secret)* | AbacatePay |
 | `email: resend` | `resend`, `modules/email/send.ts` | `RESEND_API_KEY` *(secret; optional in local dev, where emails are logged instead)*, `EMAIL_FROM` | Resend + a verified domain |
-| `storage: r2` | `r2_buckets` binding, `modules/storage` | `BUCKET` (binding) | Cloudflare R2 |
-| `queues` | `queues` producer and consumer + DLQ, `queue` export | `JOBS` (binding) | Cloudflare Queues |
+| `storage: s3` | S3 client, `modules/storage` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` *(secret)* | Any S3-compatible service |
+| `queues` | Job producer, a `worker` Compose service consuming it, a dead-letter path | — | — |
 | `publicApi` | `@orpc/openapi`, route `api/v1.$.ts` | — | — |
 | `turnstile` | widget + server verification | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` *(secret)* | Cloudflare Turnstile |
-| `sentry` | `@sentry/cloudflare` | `SENTRY_DSN` | Sentry |
-| CI | `.github/workflows/{ci,deploy}.yml` | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DATABASE_URL` (repository secrets) | GitHub |
+| `sentry` | `@sentry/node` | `SENTRY_DSN` | Sentry |
+| CI | `.github/workflows/ci.yml` (checks, then the Compose stack with E2E) | — | GitHub |
 
 Package names are listed so the dependency surface is visible. Exact versions are pinned by the reference implementation, not by this document.
 
@@ -129,7 +128,7 @@ The CLI **rejects** any configuration that breaks a rule. Because derived values
 
 1. `profile = fullstack` admits only `FullstackOptions`. In particular, there is no `language`, `target`, `database` or backend choice.
 2. `organizations = true` ⇒ `email ≠ none`. Better Auth invitations need `sendInvitationEmail`.
-3. `billing ≠ none` ⇒ cron is generated (derived), along with `src/server.ts`.
+3. `billing ≠ none` ⇒ the `scheduler` Compose service is generated (derived).
 4. `passkeys = true` or `billing = abacatepay` ⇒ the CLI prints an EXPERIMENTAL notice that links to the limitations.
 5. `profile = api, language = go` admits only `ApiGoOptions`. SQLC is the data access when `database = postgresql`.
 6. `profile = intelligence` never includes a web frontend.
@@ -146,7 +145,7 @@ The CLI **rejects** any configuration that breaks a rule. Because derived values
 { "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "stripe" } }
 
 // 3. B2B SaaS, Brazil (experimental billing)
-{ "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "abacatepay", "storage": "r2", "queues": true } }
+{ "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "abacatepay", "storage": "s3", "queues": true } }
 
 // 4. Go service with PostgreSQL
 { "profile": "api", "options": { "language": "go", "database": "postgresql", "openapi": true } }

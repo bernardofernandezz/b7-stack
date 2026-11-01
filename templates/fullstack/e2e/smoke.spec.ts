@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Read-only post-deploy check: SSR, assets, the RPC route and the auth route all answer from the Worker.
-test("deployed Worker serves SSR, RPC and auth", async ({ page, request }) => {
+// Read-only post-deploy check: SSR, assets, the RPC route and the auth route all answer from the deployed app.
+test("deployed app serves SSR, RPC and auth", async ({ page, request }) => {
   await page.goto("/", { waitUntil: "networkidle" });
   await expect(page.getByRole("link", { name: "B7 Fullstack" })).toBeVisible();
 

@@ -13,11 +13,15 @@ jobs:
         env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: b7 }
         ports: ["5432:5432"]
         options: --health-cmd "pg_isready -U postgres -d b7" --health-interval 2s --health-retries 15
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/b7
+      BETTER_AUTH_URL: http://localhost:3000
+      EMAIL_FROM: B7 <onboarding@resend.dev>
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
       - uses: actions/setup-node@v4
-        with: { node-version: lts/*, cache: pnpm }
+        with: { node-version: 26, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm run lint
@@ -25,29 +29,21 @@ jobs:
       - run: pnpm run test
       - run: pnpm run build
       - run: pnpm exec playwright install --with-deps chromium
-      # The local Workers runtime reads secrets from .dev.vars, not from the process environment.
-      - run: echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" > .dev.vars
-      - run: pnpm run test:e2e
+      - run: BETTER_AUTH_SECRET=$(openssl rand -base64 32) pnpm run test:e2e
 
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: check
+  # Builds the images and runs the whole stack (postgres → migrate → app → caddy) as production would.
+  docker:
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: lts/*, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      # Expand-then-contract migrations: old and new Worker versions overlap briefly during deploy.
-      - run: pnpm run db:migrate
-        env: { DATABASE_URL: "${{ secrets.DATABASE_URL }}" }
-      - run: pnpm run deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # Mandatory: the Vitest Workers pool injects nodejs_compat, so only a deployed check proves the Worker runs.
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec playwright test smoke
-        env: { BASE_URL: "${{ vars.PRODUCTION_URL }}" }
+        with: { node-version: 26, cache: pnpm }
+      - run: |
+          echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .env
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+      - run: docker compose up -d --build --wait
+      - run: pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium
+      - run: BASE_URL=http://localhost pnpm exec playwright test
+      - if: failure()
+        run: docker compose logs

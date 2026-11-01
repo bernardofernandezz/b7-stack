@@ -1,15 +1,57 @@
+# `docker compose up -d --build` runs the whole app: postgres → migrate → app → caddy (:80/:443).
+# `pnpm run db:up` starts only postgres, for local development.
+# Values come from .env (see .env.example).
+
 services:
   postgres:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: b7
-    ports: ["5432:5432"]
+    # Bound to localhost for local development only; the app reaches it on the compose network.
+    ports: ["127.0.0.1:5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d b7"]
       interval: 2s
       retries: 15
+    restart: unless-stopped
+
+  migrate:
+    build: { context: ., target: migrate }
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/b7
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: runtime }
+    init: true
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/b7
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${APP_URL:-http://localhost}
+      EMAIL_FROM: ${EMAIL_FROM:-B7 <onboarding@resend.dev>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      APP_URL: ${APP_URL:-http://localhost}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app: { condition: service_healthy }
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

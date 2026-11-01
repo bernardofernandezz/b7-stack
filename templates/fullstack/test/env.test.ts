@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseEnv } from "../src/env";
 
-const valid = { BETTER_AUTH_SECRET: "s".repeat(32), BETTER_AUTH_URL: "https://app.example", EMAIL_FROM: "B7 <a@b.c>" };
+const valid = {
+  DATABASE_URL: "postgres://u:p@localhost:5432/b7",
+  BETTER_AUTH_SECRET: "s".repeat(32),
+  BETTER_AUTH_URL: "https://app.example",
+  EMAIL_FROM: "B7 <a@b.c>",
+};
 
 describe("parseEnv", () => {
   it("treats an empty RESEND_API_KEY as not configured", () => {

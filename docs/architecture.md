@@ -14,7 +14,7 @@ This document defines how B7 is structured as an ecosystem: the layers, the boun
 ├──────────────────────────────────────────────────────────────┤
 │ Services       PostgreSQL · Better Auth · Stripe · Resend ... │  external or embedded
 ├──────────────────────────────────────────────────────────────┤
-│ Infrastructure Cloudflare Workers · Docker · Linux · GH Actions│  where code runs
+│ Infrastructure Docker · Compose · Caddy · Workers · GH Actions │  where code runs
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,7 +39,7 @@ This document defines how B7 is structured as an ecosystem: the layers, the boun
 
 Profiles are independent. They share standards and the configuration model, not code.
 
-- **Web** and **Fullstack** both use TanStack Start. Fullstack adds oRPC, Better Auth, PostgreSQL and SaaS modules, and fixes the deployment target to Cloudflare Workers. Hono is not used in Fullstack ([ADR-002](technology-decisions.md#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1)).
+- **Web** and **Fullstack** both use TanStack Start. Fullstack adds oRPC, Better Auth, PostgreSQL and SaaS modules, and fixes the deployment target to Docker Compose ([ADR-013](technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Hono is not used in Fullstack ([ADR-002](technology-decisions.md#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1)).
 - **API** is the profile for a backend that must stand alone, either because it is not tied to a B7 frontend or because it needs Go. A Fullstack product that later needs a separate service can add one built on the API profile.
 - **Systems** and **Intelligence** do not depend on the web stack. Intelligence models can be exported to ONNX and run inside API or Systems services where ONNX Runtime supports the platform.
 
@@ -47,7 +47,7 @@ Profiles are independent. They share standards and the configuration model, not 
 
 | Shape | Profiles | Notes |
 |-------|----------|-------|
-| One Cloudflare Worker | Fullstack (fixed), Web, API (TS) | Static assets and server code are deployed together. Bindings give access to platform services. |
+| One Cloudflare Worker | Web, API (TS) | Static assets and server code are deployed together. Bindings give access to platform services. |
 | Container (Docker) | API (TS or Go), Web (on Node.js), Intelligence | Runs on any Linux host. Docker Compose for local dependencies. |
 | Single binary | Systems, API (Go) | Distribute through GitHub Releases. Docker is optional. |
 

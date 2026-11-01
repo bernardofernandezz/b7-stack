@@ -18,7 +18,7 @@ Open an issue that states:
 - the problem it solves for real projects,
 - which pillar and profiles it affects,
 - whether it should be a default, optional or alternative,
-- its runtime constraints (for example, Cloudflare Workers compatibility) and any paid or vendor-specific requirements.
+- its runtime constraints (for example, Node.js-only APIs or Docker requirements) and any paid or vendor-specific requirements.
 
 ## Style
 

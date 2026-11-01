@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
 
-// Migrations run against the direct database URL, never through Hyperdrive or the Worker.
+// Local runs read .env; in Docker the variable comes from compose.yaml. Existing variables win.
+if (existsSync(".env")) process.loadEnvFile();
+
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dbCredentials: { url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/b7" },
+  dbCredentials: { url: process.env.DATABASE_URL ?? "" },
 });

@@ -9,7 +9,7 @@ import { verificationEmail } from "../email/templates";
 type AuthDeps = {
   db: Db;
   env: AppEnv;
-  /** Keeps Better Auth's deferred work (e.g. sending the verification email) alive after the response. */
+  /** Runs Better Auth's deferred work (e.g. sending the verification email) after the response. */
   waitUntil?: (promise: Promise<unknown>) => void;
 };
 
@@ -25,10 +25,13 @@ export function createAuth({ db, env, waitUntil }: AuthDeps) {
       sendOnSignUp: true,
       sendVerificationEmail: ({ user, url }) => sendEmail(env, verificationEmail(user.email, user.name, url)),
     },
-    // Database storage: memory storage is per-isolate on Workers. Enabled explicitly so dev and tests exercise it.
+    // Database storage, so limits hold across app replicas. Enabled explicitly so dev and tests exercise it.
     rateLimit: { enabled: true, storage: "database" },
     advanced: {
-      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      // Better Auth skips the origin check when NODE_ENV=test; keep it on so tests exercise production behavior.
+      disableOriginCheck: false,
+      // Set by the Caddy reverse proxy, which replaces any client-supplied value (compose.yaml, Caddyfile).
+      ipAddress: { ipAddressHeaders: ["x-forwarded-for"] },
       backgroundTasks: waitUntil && { handler: waitUntil },
     },
   });

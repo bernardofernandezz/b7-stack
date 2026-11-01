@@ -4,6 +4,7 @@ import { sendEmail } from "../src/modules/email/send";
 import { verificationEmail } from "../src/modules/email/templates";
 
 const env: AppEnv = {
+  DATABASE_URL: "postgres://localhost/unused",
   BETTER_AUTH_SECRET: "x".repeat(32),
   BETTER_AUTH_URL: "http://localhost:3000",
   EMAIL_FROM: "B7 <noreply@example.com>",

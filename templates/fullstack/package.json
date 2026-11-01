@@ -6,15 +6,14 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview",
-    "deploy": "pnpm run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
+    "start": "srvx serve --prod --entry dist/server/server.js --static ../client",
+    "preview": "pnpm run build && pnpm run start",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "db:up": "docker compose up -d --wait",
+    "db:up": "docker compose up -d --wait postgres",
     "db:generate": "drizzle-kit generate --name",
     "db:migrate": "drizzle-kit migrate",
     "auth:schema": "pnpm dlx auth@1.7.14 generate --config scripts/auth-cli.ts --output src/modules/auth/schema.ts --yes && biome check --write src/modules/auth/schema.ts"
@@ -35,14 +34,14 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "resend": "^6.35.0",
+    "srvx": "^1.0.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",
-    "@cloudflare/vite-plugin": "^1.66.0",
-    "@cloudflare/vitest-plugin": "^1.4.11",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -51,7 +50,9 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^4.1",
-    "wrangler": "^4.156.0"
+    "vitest": "^4.1"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

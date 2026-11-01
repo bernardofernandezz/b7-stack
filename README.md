@@ -8,7 +8,7 @@ B7 tries to make good architectural decisions easy, without hiding complexity be
 npm create b7@latest my-app
 ```
 
-> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)). It runs locally and builds for Workers, but it is **not production-ready** until the [release blockers](architecture-review.md#release-blockers) pass on a deployed Worker. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
+> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)). The generated project runs locally and as a Docker Compose stack (PostgreSQL, migrations, app, Caddy), but it is **not production-ready** until the [release checklist](RELEASE.md) reaches 1.0. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
 
 ## Principles
 
@@ -26,7 +26,7 @@ Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional
 | 3 | Backend | TanStack Start server routes + oRPC (Fullstack), Hono + oRPC (API, TS), `net/http` (Go) | OpenAPI | — |
 | 4 | Data | PostgreSQL, Drizzle + `pg` (TS), SQLC (Go), Hyperdrive on Workers | SQLite (Go) | D1 and Redis: deferred |
 | 5 | UI & Design | Tailwind CSS, Base UI, Lucide | — | — |
-| 6 | Infrastructure | Cloudflare Workers, Docker, GitHub Actions, Linux | Docker Compose, R2, Queues, Cron, Turnstile, OpenTelemetry | KV, Durable Objects: deferred |
+| 6 | Infrastructure | Docker, Docker Compose, Caddy, GitHub Actions, Linux | Cloudflare Workers (Web, API), S3-compatible storage, job queue, scheduler, Turnstile, OpenTelemetry | KV, Durable Objects: deferred |
 | 7 | Intelligence | Python, PyTorch, scikit-learn | ONNX Runtime, Hugging Face | — |
 
 ## The five profiles
@@ -39,7 +39,7 @@ A profile is a starting point with its own defaults and compatibility rules. It 
 | **B7 API** | Standalone APIs, services, integrations | TypeScript (Hono + oRPC + Zod) **or** Go (`net/http` + SQLC) | [stacks/api](stacks/api/README.md) |
 | **B7 Systems** | CLIs, networking, automation, dev tools | Go, SQLite when needed | [stacks/systems](stacks/systems/README.md) |
 | **B7 Intelligence** | ML, AI, data processing, scientific computing | Python, PyTorch, scikit-learn, ONNX Runtime | [stacks/intelligence](stacks/intelligence/README.md) |
-| **B7 Fullstack** | SaaS products and startups | TanStack Start + oRPC in one Cloudflare Worker, Better Auth, PostgreSQL + Drizzle + Hyperdrive. TypeScript only. | [stacks/fullstack](stacks/fullstack/README.md) |
+| **B7 Fullstack** | SaaS products and startups | TanStack Start + oRPC on Node.js in Docker Compose behind Caddy, Better Auth, PostgreSQL + Drizzle. TypeScript only. | [stacks/fullstack](stacks/fullstack/README.md) |
 
 ## How configuration works
 

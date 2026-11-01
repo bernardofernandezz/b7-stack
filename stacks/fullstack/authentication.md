@@ -11,14 +11,14 @@ Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has user
 | Cookies from server-side auth calls | Not needed, because B7 performs sign-in, sign-up and sign-out only through `/api/auth/*` from the browser. If a server-side flow must set auth cookies, add the `tanstackStartCookies` plugin as the **last** plugin | [Better Auth + TanStack](https://www.better-auth.com/docs/integrations/tanstack) |
 | Database adapter | Drizzle adapter, `provider: "pg"`, with the request's Drizzle instance | [Better Auth Drizzle adapter](https://www.better-auth.com/docs/adapters/drizzle) |
 | Schema | Generate the Better Auth tables with the Better Auth CLI (the `auth` package; `@better-auth/cli` is deprecated), commit them into the Drizzle schema, and migrate with Drizzle Kit | same |
-| Background tasks | `advanced.backgroundTasks.handler` is set to Workers `waitUntil`, so deferred work such as the verification email is not cut off after the response | Better Auth `advanced.backgroundTasks` option |
+| Background tasks | `advanced.backgroundTasks.handler` runs deferred work such as the verification email after the response and logs its failures | Better Auth `advanced.backgroundTasks` option |
 | Base URL | Set `baseURL` explicitly (from `BETTER_AUTH_URL`) | [Better Auth options](https://better-auth.com/docs/reference/options) |
 
 **Doc inconsistency (resolved).** The installation page imports the Drizzle adapter from `better-auth/adapters/drizzle`, while the adapter page imports it from `@better-auth/drizzle-adapter`. In `better-auth` 1.7 both resolve, and `better-auth/adapters/drizzle` re-exports the bundled adapter, so the reference implementation uses it and adds no dependency.
 
 ## Instance lifecycle
 
-- `createAuth({ db, env })` builds a Better Auth instance **per request** inside the request middleware, and stores it on the request context. The reason: the database client is request-scoped (see [architecture](architecture.md#database-client-lifecycle)), and Better Auth's own Workers example constructs the instance inside `fetch` ([Better Auth 1.5 release, 2026-02-28](https://better-auth.com/blog/1-5)).
+- `createAuth({ db, env })` builds **one** Better Auth instance per process, on the first request, next to the process-wide database pool (see [architecture](architecture.md#database-client-lifecycle)). The request middleware passes both in the request context.
 - That example is not an explicit endorsement of per-request instances. **UNVERIFIED:** the CPU cost of construction (test `BA-T1`).
 - Plugins and access-control statements are defined at module scope (they are pure configuration), and only the database and secrets are injected per request.
 
@@ -46,13 +46,13 @@ advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
 
 - The default memory storage is unsuitable for serverless, per Better Auth's docs.
 - Rate limiting is disabled in development by default. Enable it in staging so it gets tested (test `BA-T2`).
-- Rate limiting for **non-auth** endpoints is **DEFERRED**. Use Cloudflare WAF rate-limiting rules at the edge if it is needed before B7 defines an in-app mechanism.
+- Rate limiting for **non-auth** endpoints is **DEFERRED**. Use Caddy rate limiting (a plugin) or an upstream WAF if it is needed before B7 defines an in-app mechanism.
 
 ## Sign-in methods
 
 | Method | Status | Notes |
 |--------|--------|-------|
-| Email + password | CORE | Hashing CPU cost on the Workers Free plan is **UNVERIFIED** (test `W-1`, decision `A12`) |
+| Email + password | CORE | Runs in a Node.js process, so the Workers CPU limit (`W-1`, `A12`) no longer applies |
 | Email verification and password reset | DERIVED: enabled when `email = resend` | Without email, verification is off, and the CLI warns |
 | OAuth providers | OPTIONAL (per provider) | `<PROVIDER>_CLIENT_ID` and `<PROVIDER>_CLIENT_SECRET` |
 | Passkeys | **EXPERIMENTAL** (`A10`) | Not part of the first reference implementation |
@@ -88,7 +88,7 @@ Invitations require the plugin's `sendInvitationEmail` callback, so **organizati
 - Service functions take `organizationId` as a parameter and include it in every `SELECT`, `UPDATE` and `DELETE`, and in every insert.
 - There are no "global" queries over tenant tables outside explicitly named admin or maintenance code paths.
 - R2 keys (if storage is selected) use the prefix `org/<organizationId>/`. Presigned URLs are short-lived.
-- **Row-level security is OPTIONAL defense in depth, not the primary control.** With Hyperdrive, it requires every request's queries to run in a transaction that sets `set_config('app.org_id', $1, true)` ([how Hyperdrive works](https://developers.cloudflare.com/hyperdrive/concepts/how-hyperdrive-works/)). That holds a pooled connection per request, which Cloudflare discourages for scaling.
+- **Row-level security is OPTIONAL defense in depth, not the primary control.** With a shared pool, it requires every request's queries to run in a transaction that sets `set_config('app.org_id', $1, true)`, which holds a pooled connection for the whole request.
 
 ## Acceptance tests
 

@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 
 // Never copied from a working template checkout.
-const SKIP = new Set(["node_modules", "dist", ".wrangler", ".tanstack", ".dev.vars", "test-results", "playwright-report"]);
+const SKIP = new Set(["node_modules", "dist", ".tanstack", ".env", "test-results", "playwright-report"]);
 
 const here = import.meta.dirname;
 // Published package ships ./template (see prepack); the repo checkout uses ../templates.
@@ -75,18 +75,20 @@ cpSync(join(templatesRoot, template), target, { recursive: true, filter: (src) =
 // npm strips .gitignore from published packages, so prepack ships it as _gitignore.
 if (existsSync(join(target, "_gitignore"))) renameSync(join(target, "_gitignore"), join(target, ".gitignore"));
 
-for (const file of ["package.json", "wrangler.jsonc", "README.md"]) {
+for (const file of ["package.json", "README.md"]) {
   const path = join(target, file);
   if (existsSync(path)) writeFileSync(path, readFileSync(path, "utf8").replaceAll(`b7-${template}`, name));
 }
-const example = join(target, ".dev.vars.example");
+const example = join(target, ".env.example");
 if (existsSync(example)) {
+  // Hex: the password is embedded in DATABASE_URL, where base64's "+/=" would need escaping.
+  const dbPassword = randomBytes(16).toString("hex");
   writeFileSync(
-    join(target, ".dev.vars"),
-    readFileSync(example, "utf8").replace(
-      /^BETTER_AUTH_SECRET=$/m,
-      `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`,
-    ),
+    join(target, ".env"),
+    readFileSync(example, "utf8")
+      .replace(/^BETTER_AUTH_SECRET=$/m, `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`)
+      .replace(/^POSTGRES_PASSWORD=postgres$/m, `POSTGRES_PASSWORD=${dbPassword}`)
+      .replace("postgres://postgres:postgres@", `postgres://postgres:${dbPassword}@`),
   );
 }
 p.log.success(`Created ${name} (${template})`);

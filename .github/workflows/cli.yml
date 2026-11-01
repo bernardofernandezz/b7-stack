@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
 
-# Packs create-b7 the way npm publishes it, generates a project and runs that project's checks.
+# Packs create-b7 the way npm publishes it, generates a project and runs that project's checks and Docker stack.
 jobs:
   generated-project:
     runs-on: ubuntu-latest
@@ -19,7 +19,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 12.16.1 }
       - uses: actions/setup-node@v4
-        with: { node-version: lts/* }
+        with: { node-version: 26 }
       - run: pnpm install && pnpm test
         working-directory: cli
       - run: npm pack
@@ -28,6 +28,8 @@ jobs:
         working-directory: ${{ runner.temp }}
       - name: Check generated project
         working-directory: ${{ runner.temp }}/demo-app
+        # The generated .env has a random password; the CI database uses its own. Variables win over .env.
+        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/b7" }
         run: |
           pnpm run typecheck
           pnpm run lint
@@ -36,3 +38,25 @@ jobs:
           pnpm run build
           pnpm exec playwright install --with-deps chromium
           pnpm run test:e2e
+
+  generated-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.16.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26 }
+      - run: pnpm install && npm pack
+        working-directory: cli
+      - run: npm exec --yes --package=$GITHUB_WORKSPACE/cli/create-b7-*.tgz -- create-b7 demo-app --yes --no-git
+        working-directory: ${{ runner.temp }}
+      - name: Run the Compose stack and E2E through Caddy
+        working-directory: ${{ runner.temp }}/demo-app
+        run: |
+          docker compose up -d --build --wait
+          pnpm exec playwright install --with-deps chromium
+          BASE_URL=http://localhost pnpm exec playwright test
+      - if: failure()
+        working-directory: ${{ runner.temp }}/demo-app
+        run: docker compose logs

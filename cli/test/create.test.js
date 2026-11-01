@@ -14,16 +14,18 @@ test("scaffolds the fullstack template", () => {
   create(app, "--template", "fullstack");
 
   assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).name, "my-app");
-  const wrangler = readFileSync(join(app, "wrangler.jsonc"), "utf8");
-  assert.match(wrangler, /"name": "my-app"/);
-  assert.doesNotMatch(wrangler, /b7-fullstack/);
   assert.deepEqual(JSON.parse(readFileSync(join(app, "b7.json"), "utf8")), {
     profile: "fullstack",
     options: { email: "resend" },
   });
-  assert.match(readFileSync(join(app, ".dev.vars"), "utf8"), /^BETTER_AUTH_SECRET=[A-Za-z0-9+/]{43}=$/m);
+  const env = readFileSync(join(app, ".env"), "utf8");
+  assert.match(env, /^BETTER_AUTH_SECRET=[A-Za-z0-9+/]{43}=$/m);
+  const password = env.match(/^POSTGRES_PASSWORD=([0-9a-f]{32})$/m)?.[1];
+  assert.ok(password, "random POSTGRES_PASSWORD");
+  assert.match(env, new RegExp(`^DATABASE_URL=postgres://postgres:${password}@localhost:5432/b7$`, "m"));
+  for (const file of ["Dockerfile", "compose.yaml", "Caddyfile", ".dockerignore"]) assert.ok(existsSync(join(app, file)));
   assert.ok(existsSync(join(app, ".gitignore")));
-  for (const skipped of ["node_modules", "dist", ".wrangler", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
+  for (const skipped of ["node_modules", "dist", "test-results"]) assert.ok(!existsSync(join(app, skipped)));
 });
 
 test("rejects invalid names and unknown templates", () => {

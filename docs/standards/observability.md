@@ -12,8 +12,8 @@ Every deployed service must answer three questions: *Is it up? Is it slow? What 
 
 | Target | Default | Optional |
 |--------|---------|----------|
-| Cloudflare Workers | Workers Observability (`"observability": { "enabled": true }` in Wrangler) for logs and traces ([docs](https://developers.cloudflare.com/workers/observability/)) | Sentry (`@sentry/cloudflare`); export to an OTLP destination |
-| Containers (Docker) | OpenTelemetry SDK, exporting to any OTLP backend. Go: `log/slog` JSON handler | Sentry |
+| Cloudflare Workers (Web, API) | Workers Observability (`"observability": { "enabled": true }` in Wrangler) for logs and traces ([docs](https://developers.cloudflare.com/workers/observability/)) | Sentry (`@sentry/cloudflare`); export to an OTLP destination |
+| Containers (Docker), including B7 Fullstack | Logs to stdout, read with `docker compose logs` or shipped by a Docker log driver. Go: `log/slog` JSON handler | Sentry; OpenTelemetry SDK exporting to any OTLP backend |
 | Systems (CLI) | Structured logs to stderr, `--verbose` flag | — |
 
 ## Business signals

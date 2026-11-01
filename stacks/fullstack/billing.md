@@ -87,7 +87,7 @@ Both routes read the body **once as text** (`await request.text()`) **before** a
 
 **Stripe** ([webhooks](https://docs.stripe.com/webhooks)):
 - Header `Stripe-Signature`, secret `STRIPE_WEBHOOK_SECRET` (`whsec_…`).
-- On Workers: `stripe.webhooks.constructEventAsync(body, sig, secret, undefined, Stripe.createSubtleCryptoProvider())`, with the client created using `httpClient: Stripe.createFetchHttpClient()`. The only official source is the [Cloudflare announcement (2021-11-19)](https://blog.cloudflare.com/announcing-stripe-support-in-workers). **UNVERIFIED** on the current SDK (test `S-T1`, blocker).
+- On Node.js: `stripe.webhooks.constructEvent(rawBody, sig, secret)` with the raw request body (`await request.text()`). Test `S-T1` covers valid, tampered, wrong-secret and expired payloads.
 - Default tolerance is 5 minutes. Never set it to 0.
 
 **AbacatePay** ([webhook security](https://docs.abacatepay.com/pages/webhooks/security)):
@@ -125,18 +125,18 @@ Steps 4 and 8 run in the same transaction as the state change. A committed inbox
 
 ### Concurrency control
 Two different events for the same subscription can arrive at once. In that case, the `FOR UPDATE` lock in step 5 serializes them, and each fetches provider state **after** it acquires the lock. Whichever commits last wrote the newest fetched state.
-Trade-off: an outbound HTTP call (step 6) runs while a transaction and its pooled Hyperdrive connection are held. That is acceptable at webhook volumes. **UNVERIFIED** under Hyperdrive (test `B-T4`).
+Trade-off: an outbound HTTP call (step 6) runs while a transaction and its pooled connection are held. That is acceptable at webhook volumes. **UNVERIFIED** under load (test `B-T4`).
 
 ### Out-of-order events
 Event order is irrelevant, because state is never derived from the event and always comes from a provider fetch. Stripe states explicitly that ordering is not guaranteed and that `created` must not be used for ordering ([webhooks](https://docs.stripe.com/webhooks)). B7 does not use event timestamps anywhere.
 
 ### Retry and failure recovery
 - **Provider retries.** Stripe retries for up to 3 days ([webhooks](https://docs.stripe.com/webhooks)). AbacatePay retries 7 times over about 18 hours on timeout, `5xx`, `408` or `429` ([webhook security](https://docs.abacatepay.com/pages/webhooks/security)).
-- **Reconciliation (DERIVED with billing).** A daily Cron Trigger re-fetches every subscription in `incomplete`, `trialing`, `active` or `past_due` whose `synced_at` is older than 24 h, using the same lock-fetch-update steps 5–7. This covers lost webhooks, and it is the **primary** safety net for AbacatePay, given its undocumented payloads and missing period fields.
+- **Reconciliation (DERIVED with billing).** A daily job in the `scheduler` Compose service re-fetches every subscription in `incomplete`, `trialing`, `active` or `past_due` whose `synced_at` is older than 24 h, using the same lock-fetch-update steps 5–7. This covers lost webhooks, and it is the **primary** safety net for AbacatePay, given its undocumented payloads and missing period fields.
 - **Manual replay.** Re-running a sync for one subscription ID is the operator's recovery tool. Re-delivering events is never required.
 
 ### Transactional outbox: DEFERRED
-In v0.2, billing has **no side effects outside PostgreSQL**, because entitlements are derived. An outbox (`outbox` table written in the same transaction, dispatched by cron or a Queue consumer, at-least-once, keyed by event ID) is introduced only when a billing side effect exists, such as receipt emails or provisioning calls. Until then it would be unused machinery.
+In v0.2, billing has **no side effects outside PostgreSQL**, because entitlements are derived. An outbox (`outbox` table written in the same transaction, dispatched by the scheduler or the queue worker, at-least-once, keyed by event ID) is introduced only when a billing side effect exists, such as receipt emails or provisioning calls. Until then it would be unused machinery.
 
 ## Configuration
 
@@ -145,7 +145,7 @@ In v0.2, billing has **no side effects outside PostgreSQL**, because entitlement
 | Env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET` |
 | Dependency | `stripe` | none (`fetch`) |
 | Route | `src/routes/api/webhooks/stripe.ts` | `src/routes/api/webhooks/abacatepay.ts` |
-| Cron | Required (reconciliation) | Required (reconciliation) |
+| Scheduler service | Required (reconciliation) | Required (reconciliation) |
 
 ## Acceptance tests
 

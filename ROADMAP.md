@@ -10,8 +10,8 @@ Milestones are ordered by **risk reduction**, not by feature count. Each one end
 
 ## M1: Composition spike (highest risk)
 A throwaway Worker, not the reference implementation.
-- TanStack Start on Workers, with `src/start.ts` request middleware, `/api/auth/$` (Better Auth with an empty plugin list), `/api/rpc/$` (one oRPC procedure), one webhook route, and `src/server.ts` with `scheduled`.
-- PostgreSQL through one cache-disabled Hyperdrive binding, with a per-request `pg` client.
+- TanStack Start on Node.js in Docker Compose, with `src/start.ts` request middleware, `/api/auth/$`, `/api/rpc/$` and Caddy in front ([ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)).
+- PostgreSQL with one process-wide `pg` pool. Done in Compose; a public host remains (see [RELEASE.md](RELEASE.md)).
 - **Exit:** T-T1…T-T5, D-T1, D-T2, BA-T1, W-1, W-2. Decide A12.
 
 ## M1.5: `create-b7` preview
@@ -40,4 +40,4 @@ A throwaway Worker, not the reference implementation.
 - A schema for [the configuration model](docs/configuration-model.md) with one test per rule, then options and `b7 add` in the CLI from M1.5.
 
 ## Later (unscheduled; each needs a documented requirement)
-Optional R2, Queues, Turnstile, Sentry and `publicApi` modules. Templates for the other profiles. Revisiting deferred items: a cached Hyperdrive binding, KV, Durable Objects, passkeys, teams, Stripe thin events, and auth for Web and API.
+Optional R2, Queues, Turnstile, Sentry and `publicApi` modules. Templates for the other profiles. Revisiting deferred items: passkeys, teams, Stripe thin events, and auth for Web and API.

@@ -1,0 +1,6 @@
+# APP_URL with https:// and a public domain gets an automatic Let's Encrypt certificate.
+# Caddy ignores X-Forwarded-For sent by clients and sets it to the real client IP, which Better Auth rate-limits on.
+{$APP_URL} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

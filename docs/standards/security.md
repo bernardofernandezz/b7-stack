@@ -4,8 +4,8 @@ These are baseline requirements for every profile. Profile-specific details link
 
 ## Secrets
 
-- Never commit secrets. Use `.dev.vars` (Workers) or `.env` locally, list them in `.gitignore`, and commit an `.env.example` with names only.
-- Production: on Workers, use `wrangler secret put`. On containers, use the platform's secret store. On GitHub Actions, use repository or environment secrets.
+- Never commit secrets. Use `.env` locally (`.dev.vars` for Workers targets), list them in `.gitignore`, and commit an `.env.example` with names only.
+- Production: on Workers, use `wrangler secret put`. On Docker Compose, keep `.env` on the host only (never in the image: `.dockerignore` excludes it) or use the platform's secret store. On GitHub Actions, use repository or environment secrets.
 - Server secrets never reach client bundles. Only explicitly public values (such as `TURNSTILE_SITE_KEY`) may be exposed.
 - Rotate on suspicion of exposure. Payment webhook secrets in particular support rolling (Stripe) or re-creation (AbacatePay).
 
@@ -14,7 +14,7 @@ These are baseline requirements for every profile. Profile-specific details link
 - Use Better Auth's session cookies: `HttpOnly`, `Secure`, `SameSite=Lax` or stricter. Do not store session tokens in `localStorage`.
 - Set `trustedOrigins` explicitly. With credentialed CORS, never use a `*` origin.
 - Require re-authentication or a fresh session for sensitive actions such as changing email or password, deleting an organization, or changing billing.
-- Rate-limit sign-in, sign-up, password reset and invitation endpoints. On Workers, use Better Auth's `storage: "database"` and read the client IP from `cf-connecting-ip`, never memory or KV. See [authentication](../../stacks/fullstack/authentication.md#rate-limiting).
+- Rate-limit sign-in, sign-up, password reset and invitation endpoints. Use Better Auth's `storage: "database"`, never memory, so limits hold across replicas. Read the client IP from a header that only your proxy can set: `x-forwarded-for` behind Caddy (Fullstack), `cf-connecting-ip` on Workers. See [authentication](../../stacks/fullstack/authentication.md#rate-limiting).
 
 ## CSRF
 

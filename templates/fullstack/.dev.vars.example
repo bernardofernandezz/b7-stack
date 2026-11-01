@@ -1,5 +1,0 @@
-# Copy to .dev.vars (gitignored). Production: wrangler secret put <NAME>
-# Generate with: openssl rand -base64 32
-BETTER_AUTH_SECRET=
-# Optional in local dev: without it, emails are printed to the dev server log instead of sent.
-RESEND_API_KEY=

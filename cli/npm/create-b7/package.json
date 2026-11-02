@@ -27,24 +27,12 @@
   },
   "type": "module",
   "bin": {
-    "create-b7": "index.js"
+    "create-b7": "bin/create-b7.js"
   },
   "files": [
-    "index.js",
-    "config.js",
-    "generate.js",
-    "regions.js",
-    "template"
+    "bin"
   ],
   "engines": {
     "node": ">=22.12"
-  },
-  "scripts": {
-    "prepack": "node scripts/copy-template.js",
-    "postpack": "rm -rf template LICENSE",
-    "test": "node --test"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.8.1"
   }
 }

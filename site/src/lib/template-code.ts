@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createHighlighterCore } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
-import { IMPORT_PRAGMA, MARKER } from "../../../cli/regions.js";
 import compose from "../../../templates/fullstack/compose.yaml?raw";
 import scope from "../../../templates/fullstack/src/lib/scope.ts?raw";
 import procedures from "../../../templates/fullstack/src/modules/notes/procedures.ts?raw";
 import middleware from "../../../templates/fullstack/src/rpc/middleware.ts?raw";
+import { IMPORT_PRAGMA, MARKER } from "./b7/regions.js";
 
 export type Token = { text: string; light?: string; dark?: string };
 /** `cond` is the feature region the line sits in (ADR-014), null outside any region. */

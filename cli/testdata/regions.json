@@ -1,0 +1,23 @@
+{
+  "$comment": "Feature regions (ADR-014). Run by the Go tests in cli/ and by site/test/b7.test.js against the site's JS copy.",
+  "holds": [
+    { "cond": "email", "features": { "email": "resend" }, "want": true },
+    { "cond": "email", "features": { "email": "none" }, "want": false },
+    { "cond": "!organizations", "features": { "organizations": false }, "want": true },
+    { "cond": "organizations", "features": {}, "want": false },
+    { "cond": "billing=stripe", "features": { "billing": "stripe" }, "want": true },
+    { "cond": "organizations=true", "features": { "organizations": true }, "want": true }
+  ],
+  "apply": [
+    {
+      "name": "keeps or drops lines by condition, in every comment style, and removes markers and the pragma",
+      "features": { "organizations": false, "billing": "stripe", "email": "none" },
+      "text": "// biome-ignore-all assist/source/organizeImports: B7 feature regions\na\n// #if organizations\norg\n// #endif\n  {/* #if !organizations */}\nsolo\n  {/* #endif */}\n# #if billing=stripe\nstripe\n# #endif\n-- #if email\nmail\n-- #endif\n<!-- #if !email -->\nno mail\n<!-- #endif -->\nz",
+      "out": "a\nsolo\nstripe\nno mail\nz"
+    },
+    { "name": "unbalanced #if", "features": {}, "text": "// #if a\nx", "error": "f.ts:1: #if without #endif" },
+    { "name": "#endif without #if", "features": {}, "text": "x\n// #endif", "error": "f.ts:2: #endif without #if" },
+    { "name": "nested regions", "features": {}, "text": "// #if a\n// #if b\n// #endif\n// #endif", "error": "f.ts:2: nested #if" },
+    { "name": "#if without a condition", "features": {}, "text": "// #if\nx\n// #endif", "error": "f.ts:1: #if without a condition" }
+  ]
+}

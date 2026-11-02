@@ -27,6 +27,7 @@ type B7Config =
   | { profile: "intelligence"; options: { serving: "none" | "http" } };
 
 type FullstackOptions = {
+  target: "docker" | "serverless";             // default "docker"; ADR-015 (proposed)
   organizations: boolean;                      // default false
   oauthProviders: string[];                    // default []
   billing: "none" | "stripe" | "abacatepay";   // default "none"; abacatepay is EXPERIMENTAL
@@ -63,12 +64,12 @@ type ApiGoOptions = {
 | Dimension | Status | Value / rule |
 |-----------|--------|--------------|
 | Language | CORE | TypeScript. **Go is never offered** |
-| Runtime / target | CORE | Node.js in Docker, served by srvx. Docker Compose runs `postgres`, `migrate`, `app` and `caddy` ([ADR-013](/docs/technology-decisions#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). pnpm for local tooling |
+| Runtime / target | CORE | `target`, one TanStack Start app for both. **`docker`** (default): Node.js in Docker Compose running `postgres`, `migrate`, `app` and `caddy`. **`serverless`**: the same app built with a Nitro preset (Vercel, Netlify, Cloudflare) and a managed PostgreSQL ([ADR-015](/docs/technology-decisions#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), proposed; the template generates `docker` until then). pnpm for local tooling |
 | Frontend | CORE | React, TanStack Start, TanStack Router, Tailwind CSS, Base UI, Lucide |
-| HTTP routing | CORE | TanStack Start server routes (`A1`) |
+| HTTP routing | CORE | TanStack Start server routes on both targets (`A1`) |
 | App RPC | CORE | oRPC + Zod, with an in-process client for SSR (`A2`) |
 | Public REST / OpenAPI | OPTIONAL | `publicApi` |
-| Hono | **DEFERRED** in Fullstack (`A1`) | CORE in B7 API (TypeScript) |
+| Hono | **DEFERRED** in Fullstack on both targets (`A1`, ADR-015) | CORE in B7 API (TypeScript) |
 | Server functions for business logic | **DEFERRED** (`A2`) | — |
 | Database | CORE | PostgreSQL |
 | Data access | CORE | Drizzle + `pg` |
@@ -128,19 +129,20 @@ Package names are listed so the dependency surface is visible. Exact versions ar
 
 The CLI **rejects** any configuration that breaks a rule. Derived values cannot be set.
 
-1. `profile = fullstack` admits only `FullstackOptions`. In particular, there is no `language`, `target`, `database` or backend choice.
+1. `profile = fullstack` admits only `FullstackOptions`. In particular, there is no `language`, `database` or backend choice; `target` is `docker` or `serverless`.
 2. `organizations = true` ⇒ `email ≠ none`. Better Auth invitations need `sendInvitationEmail`.
 3. `billing ≠ none` ⇒ the `scheduler` Compose service is generated (derived).
 4. `passkeys = true` or `billing = abacatepay` ⇒ the CLI prints an EXPERIMENTAL notice that links to the limitations.
 5. `profile = api, language = go` admits only `ApiGoOptions`. SQLC is the data access when `database = postgresql`.
 6. `profile = intelligence` never includes a web frontend.
+7. `target = serverless` ⇒ `queues = false` (no long-lived worker), and `billing ≠ none` derives a platform cron job instead of the `scheduler` service.
 
 **Impossible by construction:** Go in Fullstack, a missing database for auth, D1 with Hyperdrive, SQLite on Workers, a billing provider without webhooks, `backendStrategy`, `runtime`, `backendFramework` and `apiCommunication`.
 
 ## Representative configurations
 
 ```jsonc
-// 1. Minimal SaaS: users, sessions, PostgreSQL. One Worker, one binding.
+// 1. Minimal SaaS: users, sessions, PostgreSQL. Docker (default target).
 { "profile": "fullstack", "options": {} }
 
 // 2. B2B SaaS, international (reference implementation scope)
@@ -148,6 +150,9 @@ The CLI **rejects** any configuration that breaks a rule. Derived values cannot 
 
 // 3. B2B SaaS, Brazil (experimental billing)
 { "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "abacatepay", "storage": "s3", "queues": true } }
+
+// 3b. SaaS on Vercel: serverless target, managed PostgreSQL
+{ "profile": "fullstack", "options": { "target": "serverless", "email": "resend", "billing": "stripe" } }
 
 // 4. Go service with PostgreSQL
 { "profile": "api", "options": { "language": "go", "database": "postgresql", "openapi": true } }
@@ -160,3 +165,4 @@ The CLI **rejects** any configuration that breaks a rule. Derived values cannot 
 - `{ "profile": "fullstack", "options": { "language": "go" } }`: no such option (rule 1).
 - `{ "profile": "fullstack", "options": { "organizations": true } }`: rule 2 (email required).
 - `{ "profile": "api", "options": { "language": "go", "publicApi": true } }`: not a Go option (rule 5).
+- `{ "profile": "fullstack", "options": { "target": "serverless", "queues": true } }`: rule 7 (queues need the docker target).

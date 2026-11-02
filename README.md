@@ -1,8 +1,8 @@
 # B7 Stack
 
-B7 is an opinionated, modular ecosystem for building modern software. It is a set of curated technology choices, architectural conventions and configurable project profiles. It is **not** a framework and not a mandatory bundle of dependencies.
+**The open-source SaaS starter with organizations, Stripe and deploy that you can keep updating.**
 
-B7 tries to make good architectural decisions easy, without hiding complexity behind new abstractions. It follows the spirit of [T3 Stack](https://create.t3.gg/) but covers more than one kind of project: web apps, APIs, system tools, machine learning and SaaS products.
+B7 generates a production SaaS foundation (TanStack Start, oRPC, Better Auth, PostgreSQL + Drizzle, Docker Compose behind Caddy) with the parts paid boilerplates charge for: organizations with tenant isolation, Stripe billing with verified webhooks and reconciliation, and email flows, each backed by an acceptance test. It is **not** a framework: you own every line, and `b7.json` records what was generated so the project can keep receiving updates ([strategy](STRATEGY.md)).
 
 ```sh
 npm create b7@preview my-app                                             # asks for the options
@@ -30,9 +30,11 @@ Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional
 | 6 | Infrastructure | Docker, Docker Compose, Caddy, GitHub Actions, Linux | Cloudflare Workers (Web, API), S3-compatible storage, job queue, scheduler, Turnstile, OpenTelemetry | KV, Durable Objects: deferred |
 | 7 | Intelligence | Python, PyTorch, scikit-learn | ONNX Runtime, Hugging Face | — |
 
-## The five profiles
+## Profiles
 
-A profile is a starting point with its own defaults and compatibility rules. It is not a fixed template.
+**B7 Fullstack** is the profile `create-b7` generates: SaaS products and startups. One TanStack Start + oRPC app with two targets, Docker Compose behind Caddy (the default) or serverless through Nitro presets with a managed PostgreSQL. Better Auth, PostgreSQL + Drizzle, TypeScript only ([stacks/fullstack](site/content/docs/stacks/fullstack/index.md)).
+
+**Later.** The other profiles are documented, and their templates wait for Fullstack 1.0 ([strategy](STRATEGY.md#the-bet)):
 
 | Profile | For | Core | Docs |
 |---------|-----|------|------|
@@ -40,7 +42,6 @@ A profile is a starting point with its own defaults and compatibility rules. It 
 | **B7 API** | Standalone APIs, services, integrations | TypeScript (Hono + oRPC + Zod) **or** Go (`net/http` + SQLC) | [stacks/api](site/content/docs/stacks/api/index.md) |
 | **B7 Systems** | CLIs, networking, automation, dev tools | Go, SQLite when needed | [stacks/systems](site/content/docs/stacks/systems/index.md) |
 | **B7 Intelligence** | ML, AI, data processing, scientific computing | Python, PyTorch, scikit-learn, ONNX Runtime | [stacks/intelligence](site/content/docs/stacks/intelligence/index.md) |
-| **B7 Fullstack** | SaaS products and startups | TanStack Start + oRPC on Node.js in Docker Compose behind Caddy, Better Auth, PostgreSQL + Drizzle. TypeScript only. | [stacks/fullstack](site/content/docs/stacks/fullstack/index.md) |
 
 ## How configuration works
 
@@ -59,6 +60,7 @@ The documentation is also a website ([site/](site/README.md), built with Fumadoc
 
 | Topic | Document |
 |-------|----------|
+| Where B7 is going and why | [STRATEGY.md](STRATEGY.md) |
 | Why B7 exists | [site/content/docs/philosophy.md](site/content/docs/philosophy.md) |
 | Decision rules | [site/content/docs/principles.md](site/content/docs/principles.md) |
 | Ecosystem architecture and boundaries | [site/content/docs/architecture.md](site/content/docs/architecture.md) |

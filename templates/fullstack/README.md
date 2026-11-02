@@ -1,6 +1,8 @@
 # B7 Fullstack reference implementation
 
-The runnable form of [B7 Fullstack](../../stacks/fullstack/README.md). `b7.json` records this project's configuration. `create-b7` generates smaller configurations by removing options from this template ([ADR-014](../../docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)).
+The runnable form of [B7 Fullstack](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/stacks/fullstack/index.md). `b7.json` records this project's configuration. `create-b7` generates smaller configurations by removing options from this template ([ADR-014](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)).
+
+This template generates the `docker` target. The `serverless` target (the same app built with a Nitro preset) is specified in [ADR-015](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app) and planned in the ROADMAP.
 
 Core: TanStack Start, oRPC + Zod, Better Auth email + password, PostgreSQL + Drizzle, Tailwind + Base UI + Lucide, Node.js in Docker.
 <!-- #if email -->

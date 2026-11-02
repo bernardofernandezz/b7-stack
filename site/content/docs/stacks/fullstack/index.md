@@ -2,9 +2,8 @@
 title: "B7 Fullstack: the SaaS and startup profile"
 ---
 
-**Purpose:** a production-oriented foundation for SaaS products. This is the most opinionated B7 profile: **TypeScript only** (Go is never offered), **one Node.js app in Docker Compose**, **one PostgreSQL database**, and a modular monolith inside it.
+**Purpose:** a production-oriented foundation for SaaS products. This is the most opinionated B7 profile: **TypeScript only** (Go is never offered), **one PostgreSQL database**, and a modular monolith inside it, shipped in one of two ways (see [Targets](#targets)).
 
-> v0.2 narrows v0.1. Hono, D1, KV, Durable Objects and backend-strategy choices are removed from this profile. See [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#decisions-requiring-maintainer-approval) for the decisions awaiting approval.
 
 ## Core
 
@@ -15,8 +14,17 @@ title: "B7 Fullstack: the SaaS and startup profile"
 | Auth | Better Auth | Users, sessions, rate-limited auth endpoints, optional organizations |
 | Data | PostgreSQL, Drizzle, `pg` (one pool per process) | Persistence |
 | UI | Tailwind CSS, Base UI, Lucide | Presentation |
-| Runtime | Node.js, srvx, Docker Compose, Caddy (TLS, reverse proxy). pnpm locally | Deployment |
+| Runtime | `docker` (default): Node.js, Docker Compose, Caddy. `serverless`: Nitro presets (Vercel, Netlify, Cloudflare). pnpm locally | Deployment |
 | Quality | Vitest, Playwright, container logs, GitHub Actions | Testing, monitoring, CI/CD |
+
+## Targets
+
+| Target | What you get |
+|--------|--------------|
+| **`docker`** (default) | One TanStack Start app with oRPC, run with Docker Compose behind Caddy. Runs the same on a laptop, a VPS or any container platform |
+| **`serverless`** | The same app, deployed through a Nitro preset to Vercel, Netlify or Cloudflare, with a managed PostgreSQL. No server to run |
+
+Both are specified in [ADR-015](/docs/technology-decisions#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app) (proposed). Today `create-b7` generates the `docker` target described in [architecture](/docs/stacks/fullstack/architecture).
 
 ## Options
 

@@ -62,6 +62,17 @@ minio†:     S3-compatible storage for local development (storage: s3)
 | **Queues** | Small JSON messages carrying IDs. Consumers re-read state and are idempotent, with bounded retries and a dead-letter path |
 | **Turnstile** | Verify the token on the server for sign-up, password reset and public forms |
 
+## Serverless deployment
+
+With `target = serverless` ([ADR-015](/docs/technology-decisions#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), proposed) there is no Docker, Caddy or Compose:
+
+- **Build:** `vite build` with a [Nitro preset](https://nitro.build/deploy) (`vercel`, `netlify`, `cloudflare-module`) set in `vite.config.ts`. The platform runs it on every push, with a preview deployment per pull request.
+- **Database:** a managed PostgreSQL (Neon, Supabase). `DATABASE_URL` is the provider's pooled connection string. Migrations run as a build or release step (`pnpm run db:migrate`), not at request time.
+- **Scheduled jobs:** the platform's cron (for example `vercel.json` `crons`) calls `/api/internal/reconcile` with `CRON_SECRET`.
+- **Client IP:** Better Auth's rate limiter reads the header the platform sets and clients cannot forge (`x-forwarded-for` on Vercel and Netlify, `cf-connecting-ip` on Cloudflare).
+- **Secrets:** the platform's environment variables. The same names as in `.env.example`.
+- **Not available:** `queues` (no long-lived worker) and the `minio` local service; use any S3-compatible storage.
+
 ## Deployment workflow
 
 ```

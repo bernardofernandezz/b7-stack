@@ -1,0 +1,10 @@
+{
+  "title": "B7 Fullstack",
+  "pages": [
+    "index",
+    "architecture",
+    "authentication",
+    "billing",
+    "infrastructure"
+  ]
+}

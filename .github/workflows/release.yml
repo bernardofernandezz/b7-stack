@@ -1,0 +1,44 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+# Builds create-b7 for every platform, attaches the archives to a GitHub release and publishes the npm packages
+# (cli/README.md › Release). npm trusted publishing (OIDC) authenticates the publish: no token, no 2FA code.
+permissions:
+  contents: write # the GitHub release
+  id-token: write # npm trusted publishing and provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cli/go.mod, cache-dependency-path: cli/go.sum }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26, registry-url: "https://registry.npmjs.org" }
+      - name: The tag matches the npm version
+        working-directory: cli
+        run: |
+          VERSION=$(node -p 'require("./npm/create-b7/package.json").version')
+          test "$GITHUB_REF_NAME" = "v$VERSION" || { echo "tag $GITHUB_REF_NAME, package $VERSION"; exit 1; }
+      - uses: goreleaser/goreleaser-action@v6
+        with: { version: "~> v2", args: release --clean, workdir: cli }
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Publish to npm
+        working-directory: cli
+        run: |
+          node scripts/npm-packages.js
+          # Prereleases (0.3.0-preview.1) go to the "preview" tag, so `npm create b7` keeps the last stable one.
+          case "$GITHUB_REF_NAME" in *-*) TAG=preview ;; *) TAG=latest ;; esac
+          VERSION=$(node -p 'require("./npm/create-b7/package.json").version')
+          # The platform packages first: the wrapper's optionalDependencies must resolve when it appears.
+          for dir in npm-dist/create-b7-*/ npm-dist/create-b7/; do
+            NAME=$(node -p "require('./${dir}package.json').name")
+            # Skips a version already on npm: the first release is published by hand, and a rerun after a partial
+            # failure must not stop at the packages that already went out.
+            if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then echo "$NAME@$VERSION is already published"; continue; fi
+            (cd "$dir" && npm publish --provenance --access public --tag "$TAG")
+          done

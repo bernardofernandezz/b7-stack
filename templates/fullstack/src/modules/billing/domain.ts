@@ -1,4 +1,4 @@
-// Provider-neutral billing contract (stacks/fullstack/billing.md). One adapter per provider implements BillingProvider.
+// Provider-neutral billing contract (site/content/docs/stacks/fullstack/billing.md). One adapter per provider implements BillingProvider.
 
 export type SubscriptionStatus = "incomplete" | "trialing" | "active" | "past_due" | "suspended" | "canceled";
 

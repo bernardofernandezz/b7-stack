@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
 
   # #if billing
-  # Runs billing reconciliation daily through the app's internal endpoint (stacks/fullstack/billing.md › Retry).
+  # Runs billing reconciliation daily through the app's internal endpoint (site/content/docs/stacks/fullstack/billing.md › Retry).
   scheduler:
     image: alpine:3
     init: true

@@ -14,7 +14,7 @@ export const note = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     // #if organizations
-    // The tenant: every query filters by it (stacks/fullstack/authentication.md › Tenant isolation).
+    // The tenant: every query filters by it (site/content/docs/stacks/fullstack/authentication.md › Tenant isolation).
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),

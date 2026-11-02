@@ -1,0 +1,21 @@
+# Builds create-b7 for every platform the npm packages cover (scripts/npm-packages.js).
+version: 2
+project_name: create-b7
+before:
+  hooks:
+    - go generate ./...
+builds:
+  - binary: create-b7
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - { goos: windows, goarch: arm64 }
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - { goos: windows, formats: [zip] }
+checksum:
+  name_template: checksums.txt

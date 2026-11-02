@@ -1,0 +1,41 @@
+{
+  "$comment": "Configuration rules (site/content/docs/configuration-model.md › Rules). Run by the Go tests in cli/ and by site/test/b7.test.js against the site's JS copy, so both stay the same. `error` is a prefix of the message.",
+  "manifest": {
+    "options": {
+      "email": { "choices": ["resend", "none"], "default": "resend" },
+      "organizations": { "choices": [false, true], "default": false },
+      "billing": { "choices": ["none", "stripe", "abacatepay"], "default": "none" }
+    }
+  },
+  "cases": [
+    {
+      "name": "defaults come from the manifest",
+      "requested": {},
+      "options": { "email": "resend", "organizations": false, "billing": "none" },
+      "derived": { "scheduler": false },
+      "notices": []
+    },
+    { "name": "rule 1: unknown option", "requested": { "storage": "s3" }, "error": "Rule 1: \"storage\" is not an option of the fullstack template" },
+    { "name": "rule 1: unknown choice", "requested": { "billing": "paypal" }, "error": "Rule 1: billing must be one of none, stripe, abacatepay" },
+    {
+      "name": "rule 1: boolean flags accept \"true\"",
+      "requested": { "organizations": "true" },
+      "options": { "email": "resend", "organizations": true, "billing": "none" }
+    },
+    { "name": "rule 2: organizations need email", "requested": { "organizations": true, "email": "none" }, "error": "Rule 2: organizations need email" },
+    {
+      "name": "rule 2: organizations with email",
+      "requested": { "organizations": true, "email": "resend" },
+      "options": { "email": "resend", "organizations": true, "billing": "none" }
+    },
+    { "name": "rule 3: billing derives the scheduler", "requested": { "billing": "stripe" }, "derived": { "scheduler": true }, "notices": [] },
+    { "name": "rule 3: no billing, no scheduler", "requested": { "billing": "none" }, "derived": { "scheduler": false } },
+    {
+      "name": "rule 4: experimental choices print a notice",
+      "requested": { "billing": "abacatepay" },
+      "notices": [
+        "Rule 4: billing = abacatepay is EXPERIMENTAL. See https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/configuration-model.md."
+      ]
+    }
+  ]
+}

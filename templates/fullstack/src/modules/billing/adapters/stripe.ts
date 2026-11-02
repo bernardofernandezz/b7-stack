@@ -8,7 +8,7 @@ import {
 } from "../domain";
 import { fromStripeStatus } from "../status";
 
-/** Events that trigger a sync (stacks/fullstack/billing.md › Stripe). Anything else is acknowledged and ignored. */
+/** Events that trigger a sync (site/content/docs/stacks/fullstack/billing.md › Stripe). Anything else is acknowledged and ignored. */
 const SYNC_EVENTS = new Set([
   "checkout.session.completed",
   "customer.subscription.created",

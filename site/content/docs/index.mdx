@@ -1,0 +1,24 @@
+---
+title: Introduction
+description: An opinionated, modular ecosystem for building modern software.
+---
+
+B7 is a set of curated technology choices, architectural conventions and configurable project profiles. It is **not** a framework and not a mandatory bundle of dependencies. It makes good architectural decisions easy, without hiding complexity behind new abstractions.
+
+```sh
+npm create b7@preview my-app                                     # asks for the options
+npm create b7@preview my-app -- --organizations --billing stripe # B2B SaaS
+```
+
+<Callout type="warn">
+  **Preview.** `create-b7` generates the B7 Fullstack reference implementation. Other profiles are documented, not yet generated. The generated project is not production-ready until the release checklist reaches 1.0.
+</Callout>
+
+## Start here
+
+<Cards>
+  <Card title="Philosophy" href="/docs/philosophy" description="Why B7 exists and what it is not." />
+  <Card title="Principles" href="/docs/principles" description="The decision rules behind every choice." />
+  <Card title="Configuration model" href="/docs/configuration-model" description="Profiles, choices and their dependencies." />
+  <Card title="B7 Fullstack" href="/docs/stacks/fullstack" description="The SaaS profile that create-b7 generates today." />
+</Cards>

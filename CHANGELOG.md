@@ -7,8 +7,10 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- Landing page rebuilt around the Fullstack pitch: a live configurator that runs create-b7's rules and region engine on the real template files, a replay of a create-b7 session, the acceptance tests and an honest comparison table.
 
 ### Changed
+- Docs move into a Fumadocs site under `site/content/docs`; old `docs/` and `stacks/` links point there.
 
 ### Fixed
 

@@ -4,9 +4,9 @@
 
 // Template files with imports inside regions turn off Biome's import sorting, which would move imports across
 // markers. Generated projects drop the pragma, and create-b7's final `pnpm run format` sorts them.
-const IMPORT_PRAGMA = "// biome-ignore-all assist/source/organizeImports: B7 feature regions";
+export const IMPORT_PRAGMA = "// biome-ignore-all assist/source/organizeImports: B7 feature regions";
 
-const MARKER = /^\s*(?:\/\/|#|\{\/\*|<!--|--)\s*#(if|endif)\b\s*([^*\s]*)/;
+export const MARKER = /^\s*(?:\/\/|#|\{\/\*|<!--|--)\s*#(if|endif)\b\s*([^*\s]*)/;
 
 /** Whether a region condition holds for the enabled features ({ email: "resend", organizations: true, ... }). */
 export function holds(cond, features) {

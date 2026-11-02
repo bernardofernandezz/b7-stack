@@ -18,6 +18,7 @@ test("scaffolds the fullstack template", () => {
     profile: "fullstack",
     options: { email: "resend", organizations: false, billing: "none" },
     derived: { scheduler: false },
+    version: JSON.parse(readFileSync(join(dirname(cli), "package.json"), "utf8")).version,
   });
   assert.ok(!existsSync(join(app, "b7.features.json")));
   assert.deepEqual(markersIn(app), []);

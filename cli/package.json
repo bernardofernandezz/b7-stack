@@ -32,6 +32,7 @@
   "files": [
     "index.js",
     "config.js",
+    "generate.js",
     "regions.js",
     "template"
   ],

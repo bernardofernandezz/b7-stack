@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { cpSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import * as p from "@clack/prompts";
 import { resolveConfig } from "./config.js";
-import { applyRegions, holds } from "./regions.js";
+import { fillEnv, generate, readJson, readManifest } from "./generate.js";
 
-// Never copied from a working template checkout. b7.features.json describes the template, not the project.
-const SKIP = new Set(["node_modules", "dist", ".tanstack", ".env", "test-results", "playwright-report", "b7.features.json"]);
 // Configuration options (site/content/docs/configuration-model.md). Each template's b7.features.json says which it supports.
 const OPTION_FLAGS = { email: { type: "string" }, organizations: { type: "boolean" }, billing: { type: "string" } };
 
@@ -35,8 +32,9 @@ const { values, positionals } = parseArgs({
   allowNegative: true,
 });
 
+const { version } = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
 if (values.version) {
-  console.log(JSON.parse(readFileSync(join(here, "package.json"), "utf8")).version);
+  console.log(version);
   process.exit(0);
 }
 if (values.help) {
@@ -99,10 +97,7 @@ if (!TEMPLATES.includes(template)) {
 }
 
 const templateDir = join(templatesRoot, template);
-const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
-const manifest = existsSync(join(templateDir, "b7.features.json"))
-  ? readJson(join(templateDir, "b7.features.json"))
-  : { options: {}, features: {} };
+const manifest = readManifest(templateDir);
 const { profile } = readJson(join(templateDir, "b7.json"));
 
 // Flags first; prompts for the rest unless --yes. Options this template does not support are rejected by rule 1.
@@ -124,50 +119,9 @@ try {
 const { config, notices } = resolved;
 for (const notice of notices) p.log.warn(notice);
 
-cpSync(templateDir, target, { recursive: true, filter: (src) => !SKIP.has(basename(src)) });
-// npm strips .gitignore from published packages, so prepack ships it as _gitignore.
-if (existsSync(join(target, "_gitignore"))) renameSync(join(target, "_gitignore"), join(target, ".gitignore"));
-
-// Disabled features lose their files and dependencies; every text file keeps or drops its regions (ADR-014).
-const disabled = Object.entries(manifest.features ?? {}).filter(([feature]) => !holds(feature, config.options));
-const pkgPath = join(target, "package.json");
-const pkg = readJson(pkgPath);
-for (const [, feature] of disabled) {
-  for (const file of feature.files ?? []) rmSync(join(target, file), { recursive: true, force: true });
-  for (const dep of feature.dependencies ?? []) {
-    delete pkg.dependencies?.[dep];
-    delete pkg.devDependencies?.[dep];
-  }
-}
-pkg.name = name;
-writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-// The template's migrations include tables of every feature, so a smaller configuration gets a fresh one.
-if (disabled.length) rmSync(join(target, "drizzle"), { recursive: true, force: true });
-
-for (const file of readdirSync(target, { recursive: true })) {
-  const path = join(target, file);
-  if (file.split(/[\\/]/).includes(".git") || !statSync(path).isFile()) continue;
-  const text = readFileSync(path, "utf8");
-  if (!text.includes("#if") || text.includes("\0")) continue;
-  writeFileSync(path, applyRegions(text, config.options, file));
-}
-
-const readme = join(target, "README.md");
-if (existsSync(readme)) writeFileSync(readme, readFileSync(readme, "utf8").replaceAll(`b7-${template}`, name));
-writeFileSync(join(target, "b7.json"), `${JSON.stringify(config, null, 2)}\n`);
+const disabled = generate({ templateDir, target, name, template, config, version });
 const example = join(target, ".env.example");
-if (existsSync(example)) {
-  // Hex: the password is embedded in DATABASE_URL, where base64's "+/=" would need escaping.
-  const dbPassword = randomBytes(16).toString("hex");
-  writeFileSync(
-    join(target, ".env"),
-    readFileSync(example, "utf8")
-      .replace(/^BETTER_AUTH_SECRET=$/m, `BETTER_AUTH_SECRET=${randomBytes(32).toString("base64")}`)
-      .replace(/^CRON_SECRET=$/m, `CRON_SECRET=${randomBytes(32).toString("base64")}`)
-      .replace(/^POSTGRES_PASSWORD=postgres$/m, `POSTGRES_PASSWORD=${dbPassword}`)
-      .replace("postgres://postgres:postgres@", `postgres://postgres:${dbPassword}@`),
-  );
-}
+if (existsSync(example)) writeFileSync(join(target, ".env"), fillEnv(readFileSync(example, "utf8")));
 p.log.success(`Created ${name} (${template}: ${JSON.stringify(config.options)})`);
 
 const run = (cmd, args) => {

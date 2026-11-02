@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -27,6 +28,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	cli = filepath.Join(dir, "create-b7")
+	if runtime.GOOS == "windows" {
+		cli += ".exe" // Windows runs only files with an executable extension
+	}
 	if out, err := exec.Command("go", "build", "-ldflags", "-X main.version="+testVersion, "-o", cli, ".").CombinedOutput(); err != nil {
 		panic(string(out))
 	}

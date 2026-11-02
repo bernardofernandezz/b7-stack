@@ -25,6 +25,24 @@ jobs:
       - run: node --test
         working-directory: site
 
+  # The release ships macOS and Windows binaries, so the Go tests (which build and run the binary) run there too.
+  cli-platforms:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Keeps LF endings: the template is embedded as checked out, and CRLF would leave region markers behind.
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cli/go.mod, cache-dependency-path: cli/go.sum }
+      - working-directory: cli
+        run: |
+          go generate ./...
+          go test ./...
+
   generated-project:
     name: generated-project (${{ matrix.config.name }})
     runs-on: ubuntu-latest

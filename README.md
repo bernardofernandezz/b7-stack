@@ -2,14 +2,14 @@
 
 **The open-source SaaS starter with organizations, Stripe and deploy that you can keep updating.**
 
-B7 generates a production SaaS foundation (TanStack Start, oRPC, Better Auth, PostgreSQL + Drizzle, Docker Compose behind Caddy) with the parts paid boilerplates charge for: organizations with tenant isolation, Stripe billing with verified webhooks and reconciliation, and email flows, each backed by an acceptance test. It is **not** a framework: you own every line, and `b7.json` records what was generated so the project can keep receiving updates ([strategy](STRATEGY.md)).
+B7 generates a production SaaS foundation (TanStack Start, oRPC, Better Auth, PostgreSQL + Drizzle, Docker Compose behind Caddy) with the parts paid boilerplates charge for: organizations with tenant isolation, Stripe billing with verified webhooks and reconciliation, and email flows, each backed by an acceptance test. It is **not** a framework: you own every line, and `b7.json` records what was generated so the project can keep receiving updates ([strategy](docs/STRATEGY.md)).
 
 ```sh
 npm create b7@preview my-app                                             # asks for the options
 npm create b7@preview my-app -- --organizations --billing stripe         # B2B SaaS
 ```
 
-> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)), with the options `--email resend|none`, `--organizations` and `--billing stripe|none`. The generated project runs locally and as a Docker Compose stack (PostgreSQL, migrations, app, Caddy), but it is **not production-ready** until the [release checklist](RELEASE.md) reaches 1.0. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](ROADMAP.md).
+> Status: **v0.2 preview.** `create-b7` generates the B7 Fullstack reference implementation ([templates/fullstack](templates/fullstack/README.md)), with the options `--email resend|none`, `--organizations` and `--billing stripe|none`. The generated project runs locally and as a Docker Compose stack (PostgreSQL, migrations, app, Caddy), but it is **not production-ready** until the [release checklist](docs/RELEASE.md) reaches 1.0. Other profiles are documented, not yet generated. Pending maintainer decisions are listed in [architecture-review.md](docs/architecture-review.md#decisions-requiring-maintainer-approval), and milestones are in [ROADMAP.md](docs/ROADMAP.md).
 
 ## Principles
 
@@ -34,7 +34,7 @@ Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional
 
 **B7 Fullstack** is the profile `create-b7` generates: SaaS products and startups. One TanStack Start + oRPC app with two targets, Docker Compose behind Caddy (the default) or serverless through Nitro presets with a managed PostgreSQL. Better Auth, PostgreSQL + Drizzle, TypeScript only ([stacks/fullstack](site/content/docs/stacks/fullstack/index.md)).
 
-**Later.** The other profiles are documented, and their templates wait for Fullstack 1.0 ([strategy](STRATEGY.md#the-bet)):
+**Later.** The other profiles are documented, and their templates wait for Fullstack 1.0 ([strategy](docs/STRATEGY.md#the-bet)):
 
 | Profile | For | Core | Docs |
 |---------|-----|------|------|
@@ -60,7 +60,7 @@ The documentation is also a website ([site/](site/README.md), built with Fumadoc
 
 | Topic | Document |
 |-------|----------|
-| Where B7 is going and why | [STRATEGY.md](STRATEGY.md) |
+| Where B7 is going and why | [STRATEGY.md](docs/STRATEGY.md) |
 | Why B7 exists | [site/content/docs/philosophy.md](site/content/docs/philosophy.md) |
 | Decision rules | [site/content/docs/principles.md](site/content/docs/principles.md) |
 | Ecosystem architecture and boundaries | [site/content/docs/architecture.md](site/content/docs/architecture.md) |
@@ -69,9 +69,9 @@ The documentation is also a website ([site/](site/README.md), built with Fumadoc
 | Engineering standards | [code quality](site/content/docs/standards/code-quality.md) · [security](site/content/docs/standards/security.md) · [testing](site/content/docs/standards/testing.md) · [observability](site/content/docs/standards/observability.md) |
 | SaaS profile in depth | [stacks/fullstack/](site/content/docs/stacks/fullstack/index.md) |
 | Fullstack reference implementation | [templates/fullstack/](templates/fullstack/README.md) |
-| Architecture review, tests and blockers | [architecture-review.md](architecture-review.md) |
-| Milestones | [ROADMAP.md](ROADMAP.md) |
-| Release checklist and changelog | [RELEASE.md](RELEASE.md) · [CHANGELOG.md](CHANGELOG.md) |
+| Architecture review, tests and blockers | [architecture-review.md](docs/architecture-review.md) |
+| Milestones | [ROADMAP.md](docs/ROADMAP.md) |
+| Release checklist and changelog | [RELEASE.md](docs/RELEASE.md) · [CHANGELOG.md](CHANGELOG.md) |
 | Generator (`create-b7`) | [cli/README.md](cli/README.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 

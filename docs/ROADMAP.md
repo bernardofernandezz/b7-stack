@@ -1,21 +1,21 @@
 # Roadmap
 
-Milestones are ordered by **risk reduction**, not by feature count. Each one ends when its acceptance tests (defined in [architecture-review.md](architecture-review.md#required-acceptance-tests)) pass against a deployed Compose stack on a public host. Later milestones do not start until the earlier ones are green. The executable task list is [RELEASE.md](RELEASE.md), and finished work is recorded in [CHANGELOG.md](CHANGELOG.md).
+Milestones are ordered by **risk reduction**, not by feature count. Each one ends when its acceptance tests (defined in [architecture-review.md](architecture-review.md#required-acceptance-tests)) pass against a deployed Compose stack on a public host. Later milestones do not start until the earlier ones are green. The executable task list is [RELEASE.md](RELEASE.md), and finished work is recorded in [CHANGELOG.md](../CHANGELOG.md).
 
 ## M0: Architecture approval (done 2026-11-01)
 - The maintainer approved A1–A11 and A13 ([list](architecture-review.md#decisions-requiring-maintainer-approval)).
 - **Exit:** the docs no longer say "proposed".
 
-**Current state (2026-11-01).** [templates/fullstack](templates/fullstack/README.md) implements the code of M1–M3 (Compose stack, email + password, organizations, Stripe billing) and M6's options, and every acceptance test that can run locally passes ([verification status](templates/fullstack/README.md#verification-status)). What blocks the exits is operational, not code: a public host, Stripe test-mode keys and a Resend domain ([RELEASE.md](RELEASE.md) 2.2, 5.3, 5.5). No milestone exits until its tests pass on that host.
+**Current state (2026-11-01).** [templates/fullstack](../templates/fullstack/README.md) implements the code of M1–M3 (Compose stack, email + password, organizations, Stripe billing) and M6's options, and every acceptance test that can run locally passes ([verification status](../templates/fullstack/README.md#verification-status)). What blocks the exits is operational, not code: a public host, Stripe test-mode keys and a Resend domain ([RELEASE.md](RELEASE.md) 2.2, 5.3, 5.5). No milestone exits until its tests pass on that host.
 
 ## M1: Composition spike (highest risk)
 A throwaway spike, not the reference implementation.
-- TanStack Start on Node.js in Docker Compose, with `src/start.ts` request middleware, `/api/auth/$`, `/api/rpc/$` and Caddy in front ([ADR-013](site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)).
+- TanStack Start on Node.js in Docker Compose, with `src/start.ts` request middleware, `/api/auth/$`, `/api/rpc/$` and Caddy in front ([ADR-013](../site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)).
 - PostgreSQL with one process-wide `pg` pool. Done in Compose; a public host remains (see [RELEASE.md](RELEASE.md)).
 - **Exit:** T-T1…T-T5, D-T1, D-T2, BA-T1, W-1, W-2. Decide A12.
 
 ## M1.5: `create-b7` preview
-- A CLI that generates `templates/fullstack` (one configuration), writes `b7.json` and is checked in CI by generating a project and running its checks. Done: [cli/](cli/README.md).
+- A CLI that generates `templates/fullstack` (one configuration), writes `b7.json` and is checked in CI by generating a project and running its checks. Done: [cli/](../cli/README.md).
 - **Exit:** published to npm as a preview after M1's deployed smoke test passes.
 
 ## M2: Identity and tenancy
@@ -29,7 +29,7 @@ A throwaway spike, not the reference implementation.
 - **Exit:** S-T1…S-T3, B-T1…B-T6.
 
 ## M4: Reference implementation `templates/fullstack`
-- Clean the M1–M3 code into the template for configuration 2 in the [configuration model](site/content/docs/configuration-model.md#representative-configurations): organizations, Resend and Stripe.
+- Clean the M1–M3 code into the template for configuration 2 in the [configuration model](../site/content/docs/configuration-model.md#representative-configurations): organizations, Resend and Stripe.
 - CI: check, migrate, deploy, smoke test.
 - **Exit:** all release blockers 1–5 and 7 are met. Only then may the template be called production-ready.
 
@@ -37,9 +37,9 @@ A throwaway spike, not the reference implementation.
 - Capture real payloads (A-T3), build the adapter, and run A-T1…A-T3 plus B-T1…B-T6 against AbacatePay.
 
 ## M6: Configurable `create-b7`
-- A schema for [the configuration model](site/content/docs/configuration-model.md) with one test per rule, then options and `b7 add` in the CLI from M1.5.
+- A schema for [the configuration model](../site/content/docs/configuration-model.md) with one test per rule, then options and `b7 add` in the CLI from M1.5.
 
-## M7: Fullstack targets ([ADR-015](site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), proposed)
+## M7: Fullstack targets ([ADR-015](../site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), proposed)
 - Approve ADR-015, then add `--target serverless` to the same app: a Nitro preset in `vite.config.ts`, managed PostgreSQL, platform cron, and no Compose files. The `docker` target stays the layout generated today.
 - CI generates and checks both targets: the Compose E2E for `docker`, a Nitro build plus E2E against a preview deployment for `serverless`.
 - Comes **before** M8: the file layout is frozen once projects can run `b7 update`.

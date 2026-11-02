@@ -20,7 +20,7 @@ const COMMAND = "npm create b7@preview my-app";
 const GITHUB = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
 const VERIFICATION = `${GITHUB}/blob/main/templates/fullstack/README.md#verification-status`;
 
-// From STRATEGY.md › The market: keep both in sync. true = included, false = not, a string = partly or planned.
+// From docs/STRATEGY.md › The market: keep both in sync. true = included, false = not, a string = partly or planned.
 const COMPARISON: [string, ...(boolean | string)[]][] = [
   ["Email sign-up with verification and reset", true, false, "partly", true],
   ["Organizations, roles, invitations", true, false, false, true],

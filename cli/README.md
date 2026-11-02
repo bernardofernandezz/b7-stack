@@ -28,7 +28,7 @@ Each directory in `templates/` is a template, so adding `templates/web` makes `-
 3. **Generate.** Write only the packages, files, Compose services and `.env.example` entries that the [feature table](../site/content/docs/configuration-model.md#fullstack-features-what-each-one-adds) lists for the selected options.
 4. **Record.** Write `b7.json` with the resolved configuration, including derived values, for later `b7 add <option>` commands.
 
-All four steps are implemented. Options compose by removing feature regions from the complete template ([ADR-014](../site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)): a smaller configuration also gets a fresh `drizzle/` migration, a regenerated route tree and an updated lockfile (`pnpm install`, or `--lockfile-only` with `--no-install`). Other profiles and `b7 add` arrive as each gets a tested template ([ROADMAP.md](../ROADMAP.md)).
+All four steps are implemented. Options compose by removing feature regions from the complete template ([ADR-014](../site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)): a smaller configuration also gets a fresh `drizzle/` migration, a regenerated route tree and an updated lockfile (`pnpm install`, or `--lockfile-only` with `--no-install`). Other profiles and `b7 add` arrive as each gets a tested template ([ROADMAP.md](../docs/ROADMAP.md)).
 
 Shared packages (`packages/`) are created only when two or more templates actually share code.
 

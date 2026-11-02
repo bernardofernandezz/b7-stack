@@ -2,7 +2,7 @@
 title: "Configuration Model"
 ---
 
-This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](https://github.com/bernardofernandezz/b7-stack/blob/main/cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#decisions-requiring-maintainer-approval).
+This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](https://github.com/bernardofernandezz/b7-stack/blob/main/cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md#decisions-requiring-maintainer-approval).
 
 The model is **one profile choice plus a few profile-specific options** (`A11`). Anything that can be inferred is **DERIVED** and cannot be set.
 

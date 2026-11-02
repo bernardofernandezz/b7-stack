@@ -2,7 +2,7 @@
 title: "B7 Fullstack Architecture"
 ---
 
-> **Status: approved (2026-11-01).** Decisions are tagged with decision IDs (`A1`–`A13`), which are listed in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#decisions-requiring-maintainer-approval). The evidence behind each decision is also in that review.
+> **Status: approved (2026-11-01).** Decisions are tagged with decision IDs (`A1`–`A13`), which are listed in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md#decisions-requiring-maintainer-approval). The evidence behind each decision is also in that review.
 
 ## Summary
 
@@ -133,4 +133,4 @@ A shared in-memory cache (such as Redis) is **DEFERRED**. No core feature needs 
 
 ## Acceptance tests for this document
 
-`T-T1` (SSR + RPC + auth + webhooks in one deployed app), `T-T4` (CSRF rejects a cross-site RPC call), `D-T2` (no connection growth under load), and the Compose stack E2E. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#required-acceptance-tests).
+`T-T1` (SSR + RPC + auth + webhooks in one deployed app), `T-T4` (CSRF rejects a cross-site RPC call), `D-T2` (no connection growth under load), and the Compose stack E2E. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md#required-acceptance-tests).

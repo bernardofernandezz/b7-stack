@@ -2,7 +2,7 @@
 title: "Billing"
 ---
 
-Billing is **OPTIONAL**: `billing = none | stripe | abacatepay`. Only the selected provider's code and env vars are generated. **Stripe is the reference integration. AbacatePay is EXPERIMENTAL** (`A7`) because of the limitations listed below. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md).
+Billing is **OPTIONAL**: `billing = none | stripe | abacatepay`. Only the selected provider's code and env vars are generated. **Stripe is the reference integration. AbacatePay is EXPERIMENTAL** (`A7`) because of the limitations listed below. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md).
 
 This is a small internal domain with one adapter per provider. It is **not** a payment framework.
 
@@ -152,4 +152,4 @@ Billing has **no side effects outside PostgreSQL**, because entitlements are der
 
 ## Acceptance tests
 
-`S-T1`, `S-T2`, `S-T3`, `A-T1`–`A-T3`, `B-T1`–`B-T5`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#required-acceptance-tests).
+`S-T1`, `S-T2`, `S-T3`, `A-T1`–`A-T3`, `B-T1`–`B-T5`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md#required-acceptance-tests).

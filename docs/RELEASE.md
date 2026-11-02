@@ -1,6 +1,6 @@
 # Release checklist
 
-The executable to-do list for B7 releases. [ROADMAP.md](ROADMAP.md) says *why* and in what order. The specs live in the linked documents, and this file does not repeat them. Every finished task is recorded in [CHANGELOG.md](CHANGELOG.md).
+The executable to-do list for B7 releases. [ROADMAP.md](ROADMAP.md) says *why* and in what order. The specs live in the linked documents, and this file does not repeat them. Every finished task is recorded in [CHANGELOG.md](../CHANGELOG.md).
 
 ## How to run this file
 
@@ -48,7 +48,7 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
 - [x] **0.1 HUMAN: run CI for the first time.** PR #1: after two CI fixes (tarball glob, frozen lockfile under `CI=true`), all 10 jobs green on `d6a54d7`. Push branch `v0.2` and open a PR, so `.github/workflows/cli.yml` runs (checks and the Compose stack of a generated project).
   - *Done when:* the `create-b7` workflow is green. Any failure becomes a new task below this one.
 - [x] **0.2 CLI `--help`, `--version` and a missing-pnpm message.** (2fd87a0)
-  - *Spec:* [cli/README.md](cli/README.md)
+  - *Spec:* [cli/README.md](../cli/README.md)
   - *Files:* `cli/index.js`, `cli/test/create.test.js`, `cli/README.md`
   - *Done when:* `node cli/index.js --help` lists every flag and the available templates. `--version` prints `cli/package.json` `version`. When `pnpm` is not on `PATH`, the CLI says how to install it. `pnpm test` in `cli/` covers `--help` and `--version`.
 - [x] **0.3 CLI package metadata.** (3401810)
@@ -67,24 +67,24 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
 ## Phase 2: Docker target and preview release
 
 - [x] **2.1 Replace Cloudflare Workers with Docker Compose** (maintainer request). (dcd2848)
-  - *Spec:* [ADR-013](site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target), [infrastructure.md](site/content/docs/stacks/fullstack/infrastructure.md), [review › Target change](architecture-review.md#target-change-docker-compose-replaces-cloudflare-workers-2026-11-01)
+  - *Spec:* [ADR-013](../site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target), [infrastructure.md](../site/content/docs/stacks/fullstack/infrastructure.md), [review › Target change](architecture-review.md#target-change-docker-compose-replaces-cloudflare-workers-2026-11-01)
   - *Files:* `templates/fullstack/{Dockerfile,compose.yaml,Caddyfile,.dockerignore,.env.example}`, `src/start.ts`, `src/db/client.ts`, `src/env.ts`, `vite.config.ts`, `vitest.config.ts`, the CLI's `.env` generation, both CI workflows, the Fullstack docs.
   - *Done when:* C-T1 and C-T2 pass for the template and for a project generated from the packed CLI.
 - [~] **2.2 HUMAN: a public host.** blocked: needs a server and a domain. A server with Docker, a domain pointing at it, ports 80 and 443 open. Copy a generated project there, set `APP_URL=https://<domain>` in `.env`, run `docker compose up -d --build`.
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
-  - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
+  - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](../templates/fullstack/README.md#verification-status).
 - [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: npm trusted publishing is not set up yet. needs: 0.1, 0.2, 0.3, 2.1
-  - create-b7 is now a Go binary in six npm packages ([cli/README.md › Release](cli/README.md#release)). On npmjs.com, add a trusted publisher (GitHub Actions, workflow `release.yml`) to `create-b7` and to each `create-b7-<os>-<arch>`. A package name that does not exist yet needs one first manual `npm publish` with a 2FA code before a trusted publisher can be added.
+  - create-b7 is now a Go binary in six npm packages ([cli/README.md › Release](../cli/README.md#release)). On npmjs.com, add a trusted publisher (GitHub Actions, workflow `release.yml`) to `create-b7` and to each `create-b7-<os>-<arch>`. A package name that does not exist yet needs one first manual `npm publish` with a 2FA code before a trusted publisher can be added.
   - Then `git tag v0.2.0-preview.0 && git push origin v0.2.0-preview.0`; `release.yml` publishes with the `preview` dist-tag.
   - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
 
 ## Phase 3: Template improvements
 
-*Spec for all:* [templates/fullstack/README.md › Known limitations](templates/fullstack/README.md#known-limitations). Each task removes its bullet from that list.
+*Spec for all:* [templates/fullstack/README.md › Known limitations](../templates/fullstack/README.md#known-limitations). Each task removes its bullet from that list.
 
 - [x] **3.1 Password reset.** (e77dde6)
-  - *Spec:* [site/content/docs/stacks/fullstack/authentication.md › Sign-in methods](site/content/docs/stacks/fullstack/authentication.md#sign-in-methods)
+  - *Spec:* [site/content/docs/stacks/fullstack/authentication.md › Sign-in methods](../site/content/docs/stacks/fullstack/authentication.md#sign-in-methods)
   - *Files:* `templates/fullstack/src/modules/auth/`, a reset route under `src/routes/`, `test/auth.test.ts`, `e2e/`
   - *Done when:* Vitest covers token issue and use (email faked as in `test/email.test.ts`), and an E2E resets a password and signs in with it.
 - [x] **3.2 Require email verification when email is configured.** (cce01e6)
@@ -100,31 +100,31 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
 
 ## Phase 4: Configurable CLI
 
-- [x] **4.1 ADR: how options compose into a template.** (f2d65e2) Decided: [ADR-014](site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template), feature regions removed from a complete template (overlays rejected).
-  - *Spec:* [site/content/docs/configuration-model.md › Fullstack features](site/content/docs/configuration-model.md#fullstack-features-what-each-one-adds), [cli/README.md › Contract](cli/README.md#contract)
+- [x] **4.1 ADR: how options compose into a template.** (f2d65e2) Decided: [ADR-014](../site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template), feature regions removed from a complete template (overlays rejected).
+  - *Spec:* [site/content/docs/configuration-model.md › Fullstack features](../site/content/docs/configuration-model.md#fullstack-features-what-each-one-adds), [cli/README.md › Contract](../cli/README.md#contract)
   - *Default proposal:* overlay directories `templates/fullstack/+<option>/` copied over the base in a fixed order. `package.json` is deep-merged. `compose.yaml`, `.env.example` and `src/env.ts` are patched at marked insertion points. Overlays are excluded when the base is used as a template.
   - *Files:* `site/content/docs/technology-decisions.md`
   - *Done when:* the ADR states the mechanism, the rejected alternatives, and how one overlay is tested on its own.
 - [x] **4.2 Configuration schema and rules.** (9731f1f) needs: 4.1. Plain JS validation in `cli/config.js` (no Zod dependency for six options), regions in `cli/regions.js`, options in `templates/fullstack/b7.features.json`.
-  - *Spec:* [site/content/docs/configuration-model.md › Rules](site/content/docs/configuration-model.md#rules) (rules 1–4 for Fullstack)
+  - *Spec:* [site/content/docs/configuration-model.md › Rules](../site/content/docs/configuration-model.md#rules) (rules 1–4 for Fullstack)
   - *Files:* `cli/` (schema, validation), `cli/test/`
   - *Done when:* one test per rule, and a violation exits non-zero with the rule number in the message. The template `b7.json` validates.
 - [x] **4.3 Option flags and prompts.** (4d26280) needs: 4.2. `--email` is offered now; `--organizations` and `--billing` are accepted by the CLI and rejected by rule 1 until the template supports them (5.1, 5.2).
   - *Files:* `cli/index.js`, `cli/README.md`, `cli/test/`
   - *Done when:* `--organizations`, `--billing <stripe|none>` and `--email <resend|none>` exist with matching prompts. Only options with a tested overlay are offered. The generated `b7.json` records the resolved configuration, including derived values.
 - [x] **4.4 CI matrix over representative configurations.** (11f84ea) needs: 4.3. Verified locally 2026-11-01: all six configurations generate, typecheck, lint, test, run in Compose and pass E2E. The matrix runs configuration 1 (`--email none`), the default, each option alone, and configuration 2 (`--organizations --billing stripe`).
-  - *Spec:* [site/content/docs/configuration-model.md › Representative configurations](site/content/docs/configuration-model.md#representative-configurations)
+  - *Spec:* [site/content/docs/configuration-model.md › Representative configurations](../site/content/docs/configuration-model.md#representative-configurations)
   - *Files:* `.github/workflows/cli.yml`
   - *Done when:* CI generates configurations 1 and 2 (once their overlays exist) and runs each project's checks.
 
 ## Phase 5: Organizations and Stripe (1.0)
 
 - [x] **5.1 `organizations` overlay.** (d3c4472) needs: 4.1. Built as feature regions (ADR-014). M-T4 not needed: B7 never calls `hasPermission`.
-  - *Spec:* [site/content/docs/stacks/fullstack/authentication.md › With organizations](site/content/docs/stacks/fullstack/authentication.md#with-organizations-optional), [Tenant isolation](site/content/docs/stacks/fullstack/authentication.md#tenant-isolation)
+  - *Spec:* [site/content/docs/stacks/fullstack/authentication.md › With organizations](../site/content/docs/stacks/fullstack/authentication.md#with-organizations-optional), [Tenant isolation](../site/content/docs/stacks/fullstack/authentication.md#tenant-isolation)
   - *Files:* `templates/fullstack/+organizations/` (plugin, `requireMembership` and `requirePermission` in `src/rpc/`, `organization_id` on notes, invitations via Resend, migration)
   - *Done when:* H-T2 and M-T1…M-T4 pass locally, and the generated project's checks pass.
 - [x] **5.2 `billing: stripe` overlay.** (11f84ea) needs: 4.1. S-T1, S-T2, S-T3, B-T1…B-T6 pass locally with Stripe faked at `fetch`. The scheduler calls an internal endpoint instead of running a second build.
-  - *Spec:* [site/content/docs/stacks/fullstack/billing.md](site/content/docs/stacks/fullstack/billing.md) (tables, Stripe mapping, webhook verification, event processing), decisions A8 and A9
+  - *Spec:* [site/content/docs/stacks/fullstack/billing.md](../site/content/docs/stacks/fullstack/billing.md) (tables, Stripe mapping, webhook verification, event processing), decisions A8 and A9
   - *Files:* `templates/fullstack/+billing-stripe/` (adapter implementing `BillingProvider` in `src/modules/billing/`, tables and migration, `src/routes/api/webhooks/stripe.ts`, reconciliation in `src/jobs/`, a `scheduler` Compose service)
   - *Done when:* S-T1 and B-T1…B-T6 pass locally (Stripe faked at the HTTP boundary), and the generated project's checks pass.
 - [~] **5.3 HUMAN: Stripe test-mode keys and a webhook endpoint** blocked: needs a Stripe account and 2.2. on the public host. needs: 2.2, 5.2
@@ -152,25 +152,25 @@ From [STRATEGY.md](STRATEGY.md). These tasks do not block 1.0 and can run in par
   - *Files:* `SECURITY.md` (private disclosure channel, response time, supported-versions table), link from `README.md`
   - *Done when:* GitHub shows the policy under the repository's Security tab.
 - [ ] **6.2 `AGENTS.md` in the Fullstack template.** needs: —
-  - *Spec:* [STRATEGY.md › P1: agent-native](STRATEGY.md#p1-agent-native), [architecture](site/content/docs/stacks/fullstack/architecture.md), [authentication › Tenant isolation](site/content/docs/stacks/fullstack/authentication.md#tenant-isolation)
+  - *Spec:* [STRATEGY.md › P1: agent-native](STRATEGY.md#p1-agent-native), [architecture](../site/content/docs/stacks/fullstack/architecture.md), [authentication › Tenant isolation](../site/content/docs/stacks/fullstack/authentication.md#tenant-isolation)
   - *Files:* `templates/fullstack/AGENTS.md` (module layout, the `requireSession` → `requireMembership` → `requirePermission` chain, tenant scoping, billing rules, commands), `CLAUDE.md` pointing to it; feature regions for the organizations and billing sections
   - *Done when:* every generated configuration in the CI matrix contains an `AGENTS.md` that mentions only the options it has.
 - [ ] **6.3 ADR: `b7 update`.** needs: 4.1
-  - *Spec:* [STRATEGY.md › P0: the upgrade path](STRATEGY.md#p0-the-upgrade-path), [ADR-014](site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)
+  - *Spec:* [STRATEGY.md › P0: the upgrade path](STRATEGY.md#p0-the-upgrade-path), [ADR-014](../site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)
   - *Files:* `site/content/docs/technology-decisions.md` (new ADR, status Proposed): what `b7.json` records (template version, options), how the base, ours and theirs versions are produced, conflict handling
   - *Done when:* the ADR is written and listed under decisions awaiting the maintainer.
 - [ ] **6.4 Serverless target spike.** needs: —
-  - *Spec:* [ADR-015](site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), [infrastructure › Serverless deployment](site/content/docs/stacks/fullstack/infrastructure.md#serverless-deployment)
+  - *Spec:* [ADR-015](../site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), [infrastructure › Serverless deployment](../site/content/docs/stacks/fullstack/infrastructure.md#serverless-deployment)
   - *Files:* a throwaway branch of the template with a Nitro `vercel` preset and managed PostgreSQL; findings in `architecture-review.md`
   - *Done when:* the findings list what works, what breaks (pool, rate-limit IP, cron) and the effort to support it. Deploying publicly needs a HUMAN task.
 - [ ] **6.5 HUMAN: approve or reject ADR-015** (one app, two targets through Nitro presets). needs: —
   - *Done when:* its status in `technology-decisions.md` says Accepted or Rejected. It must be settled before 6.3 is implemented, because the file layout freezes when `b7 update` ships.
 - [ ] **6.6 Google and GitHub sign-in, and magic links.** needs: —
-  - *Spec:* [STRATEGY.md › P0: the first impression](STRATEGY.md#p0-the-first-impression), [authentication › Sign-in methods](site/content/docs/stacks/fullstack/authentication.md#sign-in-methods)
+  - *Spec:* [STRATEGY.md › P0: the first impression](STRATEGY.md#p0-the-first-impression), [authentication › Sign-in methods](../site/content/docs/stacks/fullstack/authentication.md#sign-in-methods)
   - *Files:* `templates/fullstack/src/modules/auth/`, `src/env.ts`, `.env.example`, `test/auth.test.ts`, `e2e/`
   - *Done when:* each provider turns on only when its keys are set, Vitest covers account linking by verified email, and an E2E signs in through a faked OAuth provider.
 - [ ] **6.7 Product screens.** needs: —
-  - *Spec:* [STRATEGY.md › P0: the first impression](STRATEGY.md#p0-the-first-impression), [ADR-009](site/content/docs/technology-decisions.md#adr-009-tailwind-css-base-ui-and-lucide)
+  - *Spec:* [STRATEGY.md › P0: the first impression](STRATEGY.md#p0-the-first-impression), [ADR-009](../site/content/docs/technology-decisions.md#adr-009-tailwind-css-base-ui-and-lucide)
   - *Files:* `templates/fullstack/src/routes/`, `src/components/`, `src/modules/email/`; feature regions for the organization and billing screens
   - *Done when:* landing, pricing, dashboard, account settings, organization settings with members and invitations, and the billing page exist; every CI configuration passes its E2E, and each screen meets WCAG 2.1 AA contrast and keyboard checks.
 - [ ] **6.8 Count projects by `b7.json`.** needs: —

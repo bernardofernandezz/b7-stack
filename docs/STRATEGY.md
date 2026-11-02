@@ -37,7 +37,7 @@ Supporting metrics:
 B7 wins by keeping three promises better than anyone:
 
 1. **The production layer is included.** Auth, organizations and tenancy, billing, email, deployment and observability come with the template. Each one is backed by an acceptance test, not a blog post.
-2. **Projects stay upgradable.** A project generated today keeps receiving security fixes and improvements. Boilerplates die because their code is a snapshot. B7's feature regions ([ADR-014](site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)) and `b7.json` make a real update path possible.
+2. **Projects stay upgradable.** A project generated today keeps receiving security fixes and improvements. Boilerplates die because their code is a snapshot. B7's feature regions ([ADR-014](../site/content/docs/technology-decisions.md#adr-014-options-compose-by-removing-feature-regions-from-a-complete-template)) and `b7.json` make a real update path possible.
 3. **AI agents get it right.** In 2026 most new code is written with an agent. The stack an agent produces correct code for on the first try becomes the default. B7's explicit layers and written rules are an advantage here, but only if we ship them in the form agents read.
 
 **Win one category before the market.** "Most used" is a consequence, not a plan: B7 first becomes the default for B2B SaaS in TypeScript, then expands. Features alone never make B7 unique, because they can be copied. What competitors structurally cannot copy is a project that keeps receiving updates after it is generated.
@@ -49,7 +49,7 @@ Focus follows from the bet. **B7 Fullstack is the only profile we invest in unti
 ### P0: trust and 1.0
 Nobody builds a company on a preview.
 - A deployed smoke test on a public host (M1 exit, still open), then the remaining [release blockers](architecture-review.md#release-blockers).
-- The two Fullstack targets of [ADR-015](site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), from **one** TanStack Start app: Docker as today, and serverless through Nitro presets. The file layout must be final before `b7 update` ships, because every restructure after that breaks the upgrade path for existing projects.
+- The two Fullstack targets of [ADR-015](../site/content/docs/technology-decisions.md#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app), from **one** TanStack Start app: Docker as today, and serverless through Nitro presets. The file layout must be final before `b7 update` ships, because every restructure after that breaks the upgrade path for existing projects.
 - `SECURITY.md` with a private disclosure channel, a supported-versions table and a SemVer promise for generated projects.
 - Calling the template production-ready only after M4 ([ROADMAP.md](ROADMAP.md)).
 
@@ -94,7 +94,7 @@ These are the features paid boilerplates list on their pricing pages. B7 needs t
 ### P2: sustainability
 - GitHub Sponsors first.
 - Later, an optional paid tier (support, a pro UI kit) that never gates the core.
-- Governance in [CONTRIBUTING.md](CONTRIBUTING.md) and a second maintainer with merge rights.
+- Governance in [CONTRIBUTING.md](../CONTRIBUTING.md) and a second maintainer with merge rights.
 - A community channel (GitHub Discussions first) and `good first issue` labels on tasks taken from [RELEASE.md](RELEASE.md).
 
 ## Distribution

@@ -7,7 +7,7 @@
 
 ## Target change: Docker Compose replaces Cloudflare Workers (2026-11-01)
 
-At the maintainer's request, B7 Fullstack now runs as a Node.js process in Docker Compose behind Caddy ([ADR-013](site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Everything below that is about Workers, Hyperdrive or Wrangler is kept as history. Its effect on this review:
+At the maintainer's request, B7 Fullstack now runs as a Node.js process in Docker Compose behind Caddy ([ADR-013](../site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Everything below that is about Workers, Hyperdrive or Wrangler is kept as history. Its effect on this review:
 
 | Item | Status after the change |
 |------|-------------------------|
@@ -46,7 +46,7 @@ Version notes: no vendor page reviewed states a library version except where not
 |---|---------------|--------------------|
 | X-1 | README and Fullstack docs made Hono core, while every vendor integration B7 uses (Better Auth, oRPC) is documented against Start server routes, not Hono-in-Start | Hono removed from Fullstack [A1] |
 | X-2 | `architecture.md` promoted Hyperdrive caching ("default on") for scaling, while Cloudflare says writes do not invalidate it and recommends disabling it for auth and billing | Caching disabled on the only binding [A4] |
-| X-3 | `billing.md` said AbacatePay trials were undocumented, but AbacatePay documents `trialDays`, `trialEndsAt` and `subscription.trial_started` | Corrected in [billing](site/content/docs/stacks/fullstack/billing.md#abacatepay-experimental) |
+| X-3 | `billing.md` said AbacatePay trials were undocumented, but AbacatePay documents `trialDays`, `trialEndsAt` and `subscription.trial_started` | Corrected in [billing](../site/content/docs/stacks/fullstack/billing.md#abacatepay-experimental) |
 | X-4 | `billing.md` ordered events by time (`last_event_at`), while Stripe says not to use `created` for ordering and AbacatePay payloads carry no timestamp | Replaced with state sync [A8] |
 | X-5 | Principles say "no mandatory paid services", but email + password on the Workers Free plan (10 ms CPU) is unmeasured | Marked UNVERIFIED, blocker [A12] |
 | X-6 | The configuration model allowed SQLite (via `bun:sqlite`) on the Workers target | Removed: SQLite (TS) and D1 deferred |
@@ -237,4 +237,4 @@ Updated for the Docker target. The first reference implementation may be **built
 | A10 | KV and DO deferred, passkeys experimental, teams and dynamic roles deferred | v0.1 offered them |
 | A11 | Reduced configuration model. Auth deferred in Web and API. SQLite (TS) deferred | v0.1 had 18 dimensions |
 | A12 | Plan requirement decided after W-1 | Obsolete after A13 |
-| A13 | Docker Compose (Node.js + Caddy) replaces Cloudflare Workers as the Fullstack target ([ADR-013](site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)) | v0.1 and v0.2 targeted Workers only |
+| A13 | Docker Compose (Node.js + Caddy) replaces Cloudflare Workers as the Fullstack target ([ADR-013](../site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)) | v0.1 and v0.2 targeted Workers only |

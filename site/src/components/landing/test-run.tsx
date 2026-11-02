@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-// From templates/fullstack/README.md › Verification status and RELEASE.md 5.4b: keep in sync. `where` says how it ran.
+// From templates/fullstack/README.md › Verification status and docs/RELEASE.md 5.4b: keep in sync. `where` says how it ran.
 const TESTS = [
   ["M-T1", "a member of org A never reads org B's notes", "local"],
   ["H-T2", "a removed member is rejected on the very next request", "local"],

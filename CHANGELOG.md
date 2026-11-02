@@ -2,7 +2,7 @@
 
 All notable changes to B7 are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-**Rule:** every task completed from [RELEASE.md](RELEASE.md) adds one line under `[Unreleased]` in the same commit, with the task number, for example `- Password reset in the Fullstack template (3.1)`.
+**Rule:** every task completed from [RELEASE.md](docs/RELEASE.md) adds one line under `[Unreleased]` in the same commit, with the task number, for example `- Password reset in the Fullstack template (3.1)`.
 
 ## [Unreleased]
 

@@ -2,7 +2,7 @@
 title: "Authentication, Authorization and Tenant Isolation"
 ---
 
-Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md).
+Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md).
 
 ## Mounting and runtime
 
@@ -94,4 +94,4 @@ Invitations require the plugin's `sendInvitationEmail` callback, so **organizati
 
 ## Acceptance tests
 
-`BA-T1`, `BA-T2`, `W-1`, `H-T1` (revocation is immediate), `H-T2` (removed member is rejected), `M-T1`–`M-T4`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#required-acceptance-tests).
+`BA-T1`, `BA-T2`, `W-1`, `H-T1` (revocation is immediate), `H-T2` (removed member is rejected), `M-T1`–`M-T4`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/docs/architecture-review.md#required-acceptance-tests).

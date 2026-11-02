@@ -1,9 +1,9 @@
 import { Check, Copy, FileMinus, FilePlus, TriangleAlert } from "lucide-react";
 import { type CSSProperties, useRef, useState } from "react";
 import type { CodeFile } from "@/lib/template-code";
-import { resolveConfig } from "../../../../cli/config.js";
-import { holds } from "../../../../cli/regions.js";
 import manifest from "../../../../templates/fullstack/b7.features.json";
+import { resolveConfig } from "../../lib/b7/config.js";
+import { holds } from "../../lib/b7/regions.js";
 
 type Options = { email: string; organizations: boolean; billing: string };
 
@@ -213,9 +213,7 @@ export function Configurator({ files }: { files: CodeFile[] }) {
         </div>
         <div className="flex items-center justify-between px-4 pt-3 font-mono text-[11px] text-fd-muted-foreground">
           <span>{file.path}</span>
-          <span className="hidden sm:inline">
-            regions applied by cli/regions.js
-          </span>
+          <span className="hidden sm:inline">regions applied by create-b7</span>
         </div>
         <pre className="max-h-[32rem] min-h-[24rem] overflow-auto p-4 font-mono text-[13px] leading-6">
           <code>

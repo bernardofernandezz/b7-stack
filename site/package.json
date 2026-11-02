@@ -9,6 +9,7 @@
     "start": "vite preview",
     "preview": "vite preview",
     "types:check": "tsc --noEmit",
+    "test": "node --test",
     "lint": "biome check",
     "format": "biome format --write"
   },

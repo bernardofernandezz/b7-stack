@@ -7,25 +7,23 @@ type Line = {
   wait: number;
 };
 
-// A replay of create-b7's real prompts (cli/index.js) and the Compose services of configuration 2.
+// A replay of create-b7's real output (cli/main.go, cli/ui.go) and the Compose services of configuration 2.
 const SCRIPT: Line[] = [
   { text: "$ npm create b7@preview my-saas", tone: "cmd", wait: 900 },
-  { text: "┌  create-b7", wait: 350 },
-  { text: "│", tone: "dim", wait: 120 },
-  { text: "◇  email", tone: "accent", wait: 500 },
-  { text: "│  resend", tone: "dim", wait: 350 },
-  { text: "◇  Add organizations?", tone: "accent", wait: 500 },
-  { text: "│  Yes", tone: "dim", wait: 350 },
-  { text: "◇  billing", tone: "accent", wait: 500 },
-  { text: "│  stripe", tone: "dim", wait: 400 },
+  { text: " create-b7  0.2.0-preview.0", tone: "accent", wait: 350 },
+  { text: "┃ email          resend", wait: 500 },
+  { text: "┃ Add organizations?  Yes", wait: 500 },
+  { text: "┃ billing        stripe", wait: 500 },
+  { text: "✓ Created my-saas (fullstack)", tone: "ok", wait: 500 },
   {
-    text: "◆  Created my-saas (fullstack: organizations, resend, stripe)",
+    text: "✓ pnpm install --no-frozen-lockfile --prefer-offline (26.3s)",
     tone: "ok",
-    wait: 500,
+    wait: 900,
   },
-  { text: "◇  Dependencies installed", tone: "ok", wait: 900 },
+  { text: "✓ pnpm run format (0.1s)", tone: "ok", wait: 300 },
+  { text: "✓ git repository initialized", tone: "ok", wait: 500 },
   {
-    text: "└  Preview release: see README.md › Verification status",
+    text: "Preview release: see README.md › Verification status",
     tone: "dim",
     wait: 700,
   },

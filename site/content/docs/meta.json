@@ -1,0 +1,16 @@
+{
+  "title": "B7 Stack",
+  "pages": [
+    "index",
+    "philosophy",
+    "principles",
+    "architecture",
+    "configuration-model",
+    "technology-decisions",
+    "---Profiles---",
+    "...stacks",
+    "---Standards---",
+    "...standards",
+    "changelog"
+  ]
+}

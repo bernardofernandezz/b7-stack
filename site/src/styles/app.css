@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+@font-face {
+  font-family: "Geist";
+  src: url("../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2")
+    format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("../../node_modules/geist/dist/fonts/geist-pixel/GeistPixel-Square.woff2")
+    format("woff2");
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono", monospace;
+}
+
+/* getcracked.io's neutral palette */
+.dark {
+  --color-fd-background: #0a0a0a;
+  --color-fd-card: #0a0a0a;
+  --color-fd-border: #262626;
+  --color-fd-accent: #262626;
+  --color-fd-muted: #171717;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  /* biome-ignore lint/complexity/noImportantStyles: beats the scroll-lock library's inline style */
+  margin-right: 0px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: beats the scroll-lock library's inline style */
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+html[data-intro="done"] #intro {
+  display: none;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--delay, 0ms);
+}
+html[data-intro="done"] .reveal {
+  opacity: 1;
+  transform: none;
+}
+
+/* Landing: highlighted template code (light and dark colors from shiki) */
+.tok {
+  color: var(--l);
+}
+.dark .tok {
+  color: var(--d);
+}
+
+/* A line that appears after toggling an option in the configurator */
+.line-added {
+  animation: line-added 1.6s ease-out;
+}
+@keyframes line-added {
+  from {
+    background-color: rgb(16 185 129 / 0.28);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.term-line {
+  animation: term-line 180ms ease-out;
+}
+@keyframes term-line {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.term-cursor {
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-added,
+  .term-line,
+  .term-cursor {
+    animation: none;
+  }
+}

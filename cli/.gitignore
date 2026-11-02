@@ -1,4 +1,4 @@
-node_modules
-template
-LICENSE
-*.tgz
+internal/template/templates/
+/create-b7
+/dist/
+/npm-dist/

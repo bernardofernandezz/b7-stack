@@ -7,8 +7,18 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- Landing page rebuilt around the Fullstack pitch: a live configurator that runs create-b7's rules and region engine on the real template files, a replay of a create-b7 session, the acceptance tests and an honest comparison table.
+- `RELEASE.md`: adoption tasks 6.5–6.10 (ADR-015 approval, social sign-in, product screens, `b7.json` count, community, agent skill) and the HUMAN tasks that unblock 1.0.
 
 ### Changed
+- `create-b7` is a Go binary (Charm prompts, per-step progress with times, the failing step's output on error, Node.js and pnpm checks), still installed with `npm create b7` through per-platform optional dependencies. Releases run from a `v*` tag with GoReleaser and npm trusted publishing. The landing keeps a JS copy of the rules, tested against the same fixtures.
+- `STRATEGY.md`: B7 Bot (pull requests with template updates) as the form of the upgrade path, a public agent eval, dogfooding, and one category before the market; `RELEASE.md` tasks 6.11–6.13.
+- `STRATEGY.md`: first impression and agent-native are P0, global launch first with LATAM second, the north star is measured by counting `b7.json` files.
+- ADR-015 (Proposed): two targets from one TanStack Start app; the Docker monorepo is rejected. `ROADMAP.md` moves the targets before the upgrade path and adds M10.5 (product UI).
+- README leads with the Fullstack pitch; the other profiles move under "Later".
+- `RELEASE.md` tasks 6.14–6.22 turn the five bets (B7 Bot as a GitHub Action first, agent eval, dogfooding, a Vercel + Neon deploy button, SemVer and upgrade log) into ordered tasks.
+- `create-b7` generation moves into `cli/generate.js`, and `b7.json` records the `create-b7` version that wrote it, the merge base for `b7 update`.
+- Docs move into a Fumadocs site under `site/content/docs`; old `docs/` and `stacks/` links point there.
 
 ### Fixed
 

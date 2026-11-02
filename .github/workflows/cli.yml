@@ -4,15 +4,34 @@ on:
   push:
     branches: [main]
 
-# Packs create-b7 the way npm publishes it, generates a project and runs that project's checks and Docker stack.
+# Tests create-b7, packs it the way npm publishes it (cli/README.md › Release), generates a project and runs that
+# project's checks and Docker stack.
 jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cli/go.mod, cache-dependency-path: cli/go.sum }
+      - working-directory: cli
+        run: |
+          go generate ./...
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go test ./...
+      - uses: actions/setup-node@v4
+        with: { node-version: 26 }
+      # The landing's JS copy of the rules runs the same fixtures as the Go tests (cli/testdata).
+      - run: node --test
+        working-directory: site
+
   generated-project:
     name: generated-project (${{ matrix.config.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        # Representative configurations (site/content/docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }
@@ -31,14 +50,21 @@ jobs:
         with: { version: 12.16.1 }
       - uses: actions/setup-node@v4
         with: { node-version: 26 }
-      - run: pnpm install && pnpm test
-        working-directory: cli
-      - run: npm pack
-        working-directory: cli
-      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cli/go.mod, cache-dependency-path: cli/go.sum }
+      - uses: goreleaser/goreleaser-action@v6
+        with: { version: "~> v2", args: build --snapshot --single-target --clean, workdir: cli }
+      - working-directory: cli
+        run: |
+          node scripts/npm-packages.js
+          (cd npm-dist/create-b7 && npm pack)
+          (cd npm-dist/create-b7-linux-x64 && npm pack)
+      # The wrapper finds the binary in create-b7-linux-x64, installed next to it as npm installs an optional dependency.
+      # The globs are expanded on their own: inside "--package=..." bash would not match them.
       - run: |
-          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
-          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+          WRAPPER=$(ls "$GITHUB_WORKSPACE"/cli/npm-dist/create-b7/create-b7-*.tgz)
+          BINARY=$(ls "$GITHUB_WORKSPACE"/cli/npm-dist/create-b7-linux-x64/create-b7-linux-x64-*.tgz)
+          npm exec --yes --package="$WRAPPER" --package="$BINARY" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Check generated project
         working-directory: ${{ runner.temp }}/demo-app
@@ -59,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        # Representative configurations (site/content/docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }
@@ -72,12 +98,21 @@ jobs:
         with: { version: 12.16.1 }
       - uses: actions/setup-node@v4
         with: { node-version: 26 }
-      - run: pnpm install && npm pack
-        working-directory: cli
-      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - uses: actions/setup-go@v5
+        with: { go-version-file: cli/go.mod, cache-dependency-path: cli/go.sum }
+      - uses: goreleaser/goreleaser-action@v6
+        with: { version: "~> v2", args: build --snapshot --single-target --clean, workdir: cli }
+      - working-directory: cli
+        run: |
+          node scripts/npm-packages.js
+          (cd npm-dist/create-b7 && npm pack)
+          (cd npm-dist/create-b7-linux-x64 && npm pack)
+      # The wrapper finds the binary in create-b7-linux-x64, installed next to it as npm installs an optional dependency.
+      # The globs are expanded on their own: inside "--package=..." bash would not match them.
       - run: |
-          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
-          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+          WRAPPER=$(ls "$GITHUB_WORKSPACE"/cli/npm-dist/create-b7/create-b7-*.tgz)
+          BINARY=$(ls "$GITHUB_WORKSPACE"/cli/npm-dist/create-b7-linux-x64/create-b7-linux-x64-*.tgz)
+          npm exec --yes --package="$WRAPPER" --package="$BINARY" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
         working-directory: ${{ runner.temp }}
       - name: Run the Compose stack and E2E through Caddy
         working-directory: ${{ runner.temp }}/demo-app

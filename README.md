@@ -1,8 +1,8 @@
 # B7 Stack
 
-B7 is an opinionated, modular ecosystem for building modern software. It is a set of curated technology choices, architectural conventions and configurable project profiles. It is **not** a framework and not a mandatory bundle of dependencies.
+**The open-source SaaS starter with organizations, Stripe and deploy that you can keep updating.**
 
-B7 tries to make good architectural decisions easy, without hiding complexity behind new abstractions. It follows the spirit of [T3 Stack](https://create.t3.gg/) but covers more than one kind of project: web apps, APIs, system tools, machine learning and SaaS products.
+B7 generates a production SaaS foundation (TanStack Start, oRPC, Better Auth, PostgreSQL + Drizzle, Docker Compose behind Caddy) with the parts paid boilerplates charge for: organizations with tenant isolation, Stripe billing with verified webhooks and reconciliation, and email flows, each backed by an acceptance test. It is **not** a framework: you own every line, and `b7.json` records what was generated so the project can keep receiving updates ([strategy](STRATEGY.md)).
 
 ```sh
 npm create b7@preview my-app                                             # asks for the options
@@ -14,11 +14,11 @@ npm create b7@preview my-app -- --organizations --billing stripe         # B2B S
 ## Principles
 
 **Simplicity First · Performance Matters · Explicit Architecture · Developer Experience · Production Ready.**
-See [philosophy](docs/philosophy.md) for why B7 exists and [principles](docs/principles.md) for the decision rules that follow from them.
+See [philosophy](site/content/docs/philosophy.md) for why B7 exists and [principles](site/content/docs/principles.md) for the decision rules that follow from them.
 
 ## The seven pillars
 
-Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional** integrations (added only when selected) and **alternatives** (supported, not preferred). Rationale is in [technology decisions](docs/technology-decisions.md).
+Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional** integrations (added only when selected) and **alternatives** (supported, not preferred). Rationale is in [technology decisions](site/content/docs/technology-decisions.md).
 
 | # | Pillar | Default | Optional | Alternative |
 |---|--------|---------|----------|-------------|
@@ -30,17 +30,18 @@ Each pillar lists **defaults** (what B7 picks unless told otherwise), **optional
 | 6 | Infrastructure | Docker, Docker Compose, Caddy, GitHub Actions, Linux | Cloudflare Workers (Web, API), S3-compatible storage, job queue, scheduler, Turnstile, OpenTelemetry | KV, Durable Objects: deferred |
 | 7 | Intelligence | Python, PyTorch, scikit-learn | ONNX Runtime, Hugging Face | — |
 
-## The five profiles
+## Profiles
 
-A profile is a starting point with its own defaults and compatibility rules. It is not a fixed template.
+**B7 Fullstack** is the profile `create-b7` generates: SaaS products and startups. One TanStack Start + oRPC app with two targets, Docker Compose behind Caddy (the default) or serverless through Nitro presets with a managed PostgreSQL. Better Auth, PostgreSQL + Drizzle, TypeScript only ([stacks/fullstack](site/content/docs/stacks/fullstack/index.md)).
+
+**Later.** The other profiles are documented, and their templates wait for Fullstack 1.0 ([strategy](STRATEGY.md#the-bet)):
 
 | Profile | For | Core | Docs |
 |---------|-----|------|------|
-| **B7 Web** | React web apps, including SSR apps with integrated server logic | TanStack Start, Tailwind, Base UI, Node.js | [stacks/web](stacks/web/README.md) |
-| **B7 API** | Standalone APIs, services, integrations | TypeScript (Hono + oRPC + Zod) **or** Go (`net/http` + SQLC) | [stacks/api](stacks/api/README.md) |
-| **B7 Systems** | CLIs, networking, automation, dev tools | Go, SQLite when needed | [stacks/systems](stacks/systems/README.md) |
-| **B7 Intelligence** | ML, AI, data processing, scientific computing | Python, PyTorch, scikit-learn, ONNX Runtime | [stacks/intelligence](stacks/intelligence/README.md) |
-| **B7 Fullstack** | SaaS products and startups | TanStack Start + oRPC on Node.js in Docker Compose behind Caddy, Better Auth, PostgreSQL + Drizzle. TypeScript only. | [stacks/fullstack](stacks/fullstack/README.md) |
+| **B7 Web** | React web apps, including SSR apps with integrated server logic | TanStack Start, Tailwind, Base UI, Node.js | [stacks/web](site/content/docs/stacks/web/index.md) |
+| **B7 API** | Standalone APIs, services, integrations | TypeScript (Hono + oRPC + Zod) **or** Go (`net/http` + SQLC) | [stacks/api](site/content/docs/stacks/api/index.md) |
+| **B7 Systems** | CLIs, networking, automation, dev tools | Go, SQLite when needed | [stacks/systems](site/content/docs/stacks/systems/index.md) |
+| **B7 Intelligence** | ML, AI, data processing, scientific computing | Python, PyTorch, scikit-learn, ONNX Runtime | [stacks/intelligence](site/content/docs/stacks/intelligence/index.md) |
 
 ## How configuration works
 
@@ -51,19 +52,22 @@ A project is a **profile** plus a set of independent **choices**: language, back
 - declares the environment variables and external services it needs,
 - may require other choices (for example, organizations require email), and values that can be inferred are derived rather than chosen. B7 Fullstack never offers Go.
 
-The full model, the allowed values per profile and example configurations are in [docs/configuration-model.md](docs/configuration-model.md).
+The full model, the allowed values per profile and example configurations are in [site/content/docs/configuration-model.md](site/content/docs/configuration-model.md).
 
 ## Documentation map
 
+The documentation is also a website ([site/](site/README.md), built with Fumadocs): run `pnpm dev` in `site/`.
+
 | Topic | Document |
 |-------|----------|
-| Why B7 exists | [docs/philosophy.md](docs/philosophy.md) |
-| Decision rules | [docs/principles.md](docs/principles.md) |
-| Ecosystem architecture and boundaries | [docs/architecture.md](docs/architecture.md) |
-| Configuration model and compatibility | [docs/configuration-model.md](docs/configuration-model.md) |
-| Why each technology was chosen | [docs/technology-decisions.md](docs/technology-decisions.md) |
-| Engineering standards | [code quality](docs/standards/code-quality.md) · [security](docs/standards/security.md) · [testing](docs/standards/testing.md) · [observability](docs/standards/observability.md) |
-| SaaS profile in depth | [stacks/fullstack/](stacks/fullstack/README.md) |
+| Where B7 is going and why | [STRATEGY.md](STRATEGY.md) |
+| Why B7 exists | [site/content/docs/philosophy.md](site/content/docs/philosophy.md) |
+| Decision rules | [site/content/docs/principles.md](site/content/docs/principles.md) |
+| Ecosystem architecture and boundaries | [site/content/docs/architecture.md](site/content/docs/architecture.md) |
+| Configuration model and compatibility | [site/content/docs/configuration-model.md](site/content/docs/configuration-model.md) |
+| Why each technology was chosen | [site/content/docs/technology-decisions.md](site/content/docs/technology-decisions.md) |
+| Engineering standards | [code quality](site/content/docs/standards/code-quality.md) · [security](site/content/docs/standards/security.md) · [testing](site/content/docs/standards/testing.md) · [observability](site/content/docs/standards/observability.md) |
+| SaaS profile in depth | [stacks/fullstack/](site/content/docs/stacks/fullstack/index.md) |
 | Fullstack reference implementation | [templates/fullstack/](templates/fullstack/README.md) |
 | Architecture review, tests and blockers | [architecture-review.md](architecture-review.md) |
 | Milestones | [ROADMAP.md](ROADMAP.md) |
@@ -74,4 +78,3 @@ The full model, the allowed values per profile and example configurations are in
 ## License
 
 [MIT](LICENSE)
-# b7-stack

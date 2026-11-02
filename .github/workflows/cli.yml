@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        # Representative configurations (site/content/docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        # Representative configurations (site/content/docs/configuration-model.md), plus each option on its own.
         config:
           - { name: minimal, args: "--email none" }
           - { name: email, args: "--email resend" }

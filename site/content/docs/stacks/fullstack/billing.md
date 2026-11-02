@@ -1,6 +1,8 @@
-# Billing (v0.2)
+---
+title: "Billing"
+---
 
-Billing is **OPTIONAL**: `billing = none | stripe | abacatepay`. Only the selected provider's code and env vars are generated. **Stripe is the reference integration. AbacatePay is EXPERIMENTAL** (`A7`) because of the limitations listed below. Decision IDs and evidence are in [architecture-review.md](../../architecture-review.md).
+Billing is **OPTIONAL**: `billing = none | stripe | abacatepay`. Only the selected provider's code and env vars are generated. **Stripe is the reference integration. AbacatePay is EXPERIMENTAL** (`A7`) because of the limitations listed below. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md).
 
 This is a small internal domain with one adapter per provider. It is **not** a payment framework.
 
@@ -77,7 +79,7 @@ Facts from the [subscription reference](https://docs.abacatepay.com/pages/subscr
 | Webhook payload `data` fields for `subscription.*` are not documented | **UNVERIFIED** how to extract the subscription ID from an event (test `A-T3`). This **blocks** the adapter |
 | Webhook HMAC is keyed with a public key published in the docs | Proves integrity only. Authentication relies on the URL secret. See [verification](#webhook-verification) |
 | No event timestamps | Irrelevant, because B7 never orders by event time |
-| Trials exist (`trialDays`, `trialEndsAt`, event `subscription.trial_started`) | Supported. **v0.1 wrongly said trials were undocumented** |
+| Trials exist (`trialDays`, `trialEndsAt`, event `subscription.trial_started`) | Supported |
 
 - **Linking:** `POST /v2/subscriptions/create` returns a checkout `id` (`bill_…`) and a `url`. B7 stores the checkout ID as `provider_checkout_id`. `GET /v2/subscriptions/get` returns `checkoutId`, which links the subscription back. Whether `externalId` comes back on webhooks or on GET is undocumented, so B7 does not rely on it.
 - **State always comes from `GET /v2/subscriptions/get`.** Webhooks are only a trigger.
@@ -95,7 +97,7 @@ Both routes read the body **once as text** (`await request.text()`) **before** a
 1. Compare the `webhookSecret` query parameter with `ABACATEPAY_WEBHOOK_SECRET` in constant time. If it doesn't match, return `401`. **This is the authentication factor.**
 2. Verify `X-Webhook-Signature`: base64 HMAC-SHA256 of the raw body, keyed with AbacatePay's published public key, using `crypto.subtle` and comparing with `crypto.subtle.timingSafeEqual`. **This is an integrity check only**, because the key is public.
 3. Reject a `devMode` value that does not match the environment. Respond `200` without processing, so the provider does not retry.
-4. Redact `webhookSecret` from every log, trace and error report (see the [observability standard](../../docs/standards/observability.md#baseline)).
+4. Redact `webhookSecret` from every log, trace and error report (see the [observability standard](/docs/standards/observability#baseline)).
 5. Never respond `410`, because that disables the webhook.
 
 The re-fetch in [event processing](#event-processing) is what turns a forged or replayed event into a no-op. A forged event can at most trigger a sync with the provider's real state.
@@ -137,7 +139,7 @@ Event order is irrelevant, because state is never derived from the event and alw
 - **Manual replay.** Re-running a sync for one subscription ID is the operator's recovery tool. Re-delivering events is never required.
 
 ### Transactional outbox: DEFERRED
-In v0.2, billing has **no side effects outside PostgreSQL**, because entitlements are derived. An outbox (`outbox` table written in the same transaction, dispatched by the scheduler or the queue worker, at-least-once, keyed by event ID) is introduced only when a billing side effect exists, such as receipt emails or provisioning calls. Until then it would be unused machinery.
+Billing has **no side effects outside PostgreSQL**, because entitlements are derived. An outbox (`outbox` table written in the same transaction, dispatched by the scheduler or the queue worker, at-least-once, keyed by event ID) is introduced only when a billing side effect exists, such as receipt emails or provisioning calls. Until then it would be unused machinery.
 
 ## Configuration
 
@@ -150,4 +152,4 @@ In v0.2, billing has **no side effects outside PostgreSQL**, because entitlement
 
 ## Acceptance tests
 
-`S-T1`, `S-T2`, `S-T3`, `A-T1`–`A-T3`, `B-T1`–`B-T5`. Definitions are in [architecture-review.md](../../architecture-review.md#required-acceptance-tests).
+`S-T1`, `S-T2`, `S-T3`, `A-T1`–`A-T3`, `B-T1`–`B-T5`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#required-acceptance-tests).

@@ -1,4 +1,6 @@
-# Testing
+---
+title: "Testing"
+---
 
 ## What to test
 

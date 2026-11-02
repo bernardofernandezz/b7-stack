@@ -1,6 +1,8 @@
-# Technology Decisions (v0.2)
+---
+title: "Technology Decisions"
+---
 
-These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged since v0.1, or approved by the maintainer on 2026-11-01 with its decision ID in brackets), `Proposed` (pending approval), `Superseded`, or `Rejected`. Detailed evidence and the verification status of every claim are in [architecture-review.md](../architecture-review.md). Allowed combinations are defined in [configuration-model.md](configuration-model.md).
+These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged, or approved by the maintainer on 2026-11-01 with its decision ID in brackets), `Proposed` (pending approval), `Superseded`, or `Rejected`. Detailed evidence and the verification status of every claim are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md). Allowed combinations are defined in [configuration-model.md](/docs/configuration-model).
 
 ## B7 Fullstack
 
@@ -41,7 +43,7 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 ### ADR-006: Billing uses Stripe as the reference, AbacatePay as experimental, and state sync instead of event replay [A7, A8]
 **Status:** Accepted (approved 2026-11-01).
 **Decision:** a small billing domain with one adapter per provider. Webhooks only trigger a sync: state always comes from a provider API fetch, under a per-subscription row lock, with a transactional inbox for dedup. Entitlements are derived on read. The outbox is deferred.
-**Why:** Stripe does not guarantee event order and says not to order by `created` ([Stripe webhooks](https://docs.stripe.com/webhooks)). AbacatePay events have no timestamps, its subscription status is only `PENDING`/`ACTIVE`/`CANCELLED`, it has no period-end field, and its payload fields are undocumented ([AbacatePay subscriptions](https://docs.abacatepay.com/pages/subscriptions/reference), [webhooks](https://docs.abacatepay.com/pages/webhooks)). See [billing](../stacks/fullstack/billing.md).
+**Why:** Stripe does not guarantee event order and says not to order by `created` ([Stripe webhooks](https://docs.stripe.com/webhooks)). AbacatePay events have no timestamps, its subscription status is only `PENDING`/`ACTIVE`/`CANCELLED`, it has no period-end field, and its payload fields are undocumented ([AbacatePay subscriptions](https://docs.abacatepay.com/pages/subscriptions/reference), [webhooks](https://docs.abacatepay.com/pages/webhooks)). See [billing](/docs/stacks/fullstack/billing).
 **Trade-off:** one provider API call per webhook, and a transaction held across that call.
 **Rejected:** a generic payment framework. The Better Auth Stripe plugin (it would put two billing paths in one product). Event-sourced state from webhook payloads.
 
@@ -53,7 +55,7 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 
 ### ADR-008: Optional Cloudflare services only when a feature needs them, with KV and Durable Objects deferred [A9, A10]
 **Status:** Accepted (approved 2026-11-01). **Amended by [ADR-013](#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)**: optional services are now Compose services or plain HTTP APIs, and KV and Durable Objects no longer apply.
-**Decision:** R2 (storage), Queues (queues) and Turnstile are opt-in. Cron is derived from billing. KV and Durable Objects are not offered in v0.2.
+**Decision:** R2 (storage), Queues (queues) and Turnstile are opt-in. Cron is derived from billing. KV and Durable Objects are not offered.
 **Why:** no core feature needs KV or DOs, and KV's eventual consistency makes it unsafe for auth, rate limits and billing.
 
 ### ADR-009: Tailwind CSS, Base UI and Lucide
@@ -103,4 +105,4 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged sinc
 | Next.js | Its server model and defaults are tied to its own platform assumptions. B7 prefers TanStack Start's explicit routing, which builds to a plain fetch handler served by Node.js |
 | Redis | Not offered. Use PostgreSQL first. On containers, add it by hand only with a documented reason |
 | Elysia, Express, Fastify | Bun-centric or Node-centric. Hono covers B7 API on every target |
-| SQLite (TS) and D1 | Deferred everywhere in v0.2 to keep one data model per language |
+| SQLite (TS) and D1 | Deferred everywhere to keep one data model per language |

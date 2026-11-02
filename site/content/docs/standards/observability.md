@@ -1,4 +1,6 @@
-# Observability
+---
+title: "Observability"
+---
 
 ## Baseline
 

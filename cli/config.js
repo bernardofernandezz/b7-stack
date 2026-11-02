@@ -1,5 +1,5 @@
 // Resolves and validates a configuration against a template's b7.features.json and the
-// configuration model rules (docs/configuration-model.md › Rules).
+// configuration model rules (site/content/docs/configuration-model.md › Rules).
 
 const EXPERIMENTAL = new Set(["billing=abacatepay", "passkeys=true"]);
 
@@ -31,7 +31,7 @@ export function resolveConfig(profile, manifest, requested) {
   // Rule 4: experimental choices print a notice.
   const notices = Object.entries(options)
     .filter(([name, value]) => EXPERIMENTAL.has(`${name}=${value}`))
-    .map(([name, value]) => `Rule 4: ${name} = ${value} is EXPERIMENTAL. See docs/configuration-model.md.`);
+    .map(([name, value]) => `Rule 4: ${name} = ${value} is EXPERIMENTAL. See https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/configuration-model.md.`);
 
   return { config: { profile, options, derived }, notices };
 }

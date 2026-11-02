@@ -1,6 +1,8 @@
-# B7 Fullstack Infrastructure (v0.2)
+---
+title: "B7 Fullstack Infrastructure"
+---
 
-The smallest viable deployment is **one host with Docker, running one Compose project**: PostgreSQL, a one-shot migration job, the app and Caddy. Every other service is added only by a selected feature (see the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds)). Why Docker replaced Cloudflare Workers is in [ADR-013](../../docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target).
+The smallest viable deployment is **one host with Docker, running one Compose project**: PostgreSQL, a one-shot migration job, the app and Caddy. Every other service is added only by a selected feature (see the [configuration model](/docs/configuration-model#fullstack-features-what-each-one-adds)). Why Docker replaced Cloudflare Workers is in [ADR-013](/docs/technology-decisions#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target).
 
 ## Build and images
 
@@ -35,7 +37,7 @@ minio†:     S3-compatible storage for local development (storage: s3)
 
 ## Runtime model
 
-- One Node.js process per `app` container, with **one `pg` pool** (`DATABASE_POOL_MAX`, default 10) and **one Better Auth instance**, built on the first request (see [architecture](architecture.md#database-client-lifecycle)).
+- One Node.js process per `app` container, with **one `pg` pool** (`DATABASE_POOL_MAX`, default 10) and **one Better Auth instance**, built on the first request (see [architecture](/docs/stacks/fullstack/architecture#database-client-lifecycle)).
 - Size the pool so that `app replicas × DATABASE_POOL_MAX` stays below PostgreSQL's `max_connections` (100 by default).
 - The process holds no per-user state in memory: sessions and rate-limit counters live in PostgreSQL, so `docker compose up --scale app=N` works behind Caddy.
 
@@ -49,7 +51,7 @@ minio†:     S3-compatible storage for local development (storage: s3)
 
 - `.env` (gitignored), with `.env.example` committed. `create-b7` generates `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`.
 - Production: `.env` on the host with mode `600`, or the secret store of the platform running the containers. CI: GitHub secrets.
-- The variables for each feature are listed in the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds).
+- The variables for each feature are listed in the [configuration model](/docs/configuration-model#fullstack-features-what-each-one-adds).
 
 ## Optional services
 

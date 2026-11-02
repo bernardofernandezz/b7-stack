@@ -1,4 +1,6 @@
-# B7 Systems
+---
+title: "B7 Systems"
+---
 
 **Purpose:** CLIs, networking tools, automation, developer tools and system utilities.
 
@@ -22,4 +24,4 @@
 
 ## When to choose another profile
 
-- It serves HTTP to other systems as its main job: use **[B7 API](../api/README.md)** with the Go track.
+- It serves HTTP to other systems as its main job: use **[B7 API](/docs/stacks/api)** with the Go track.

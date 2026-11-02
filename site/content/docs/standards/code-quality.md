@@ -1,4 +1,6 @@
-# Code Quality
+---
+title: "Code Quality"
+---
 
 ## All languages
 

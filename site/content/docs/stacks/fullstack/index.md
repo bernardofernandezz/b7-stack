@@ -1,8 +1,10 @@
-# B7 Fullstack: the SaaS and startup profile (v0.2)
+---
+title: "B7 Fullstack: the SaaS and startup profile"
+---
 
 **Purpose:** a production-oriented foundation for SaaS products. This is the most opinionated B7 profile: **TypeScript only** (Go is never offered), **one Node.js app in Docker Compose**, **one PostgreSQL database**, and a modular monolith inside it.
 
-> v0.2 narrows v0.1. Hono, D1, KV, Durable Objects and backend-strategy choices are removed from this profile. See [architecture-review.md](../../architecture-review.md#decisions-requiring-maintainer-approval) for the decisions awaiting approval.
+> v0.2 narrows v0.1. Hono, D1, KV, Durable Objects and backend-strategy choices are removed from this profile. See [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#decisions-requiring-maintainer-approval) for the decisions awaiting approval.
 
 ## Core
 
@@ -18,13 +20,13 @@
 
 ## Options
 
-`organizations`, `oauthProviders`, `billing` (Stripe, or AbacatePay *experimental*), `email` (Resend), `storage` (R2), `queues`, `publicApi`, `turnstile`, `sentry`, and `passkeys` *(experimental)*. Dependencies, env vars and rules for each are in the [configuration model](../../docs/configuration-model.md#b7-fullstack).
+`organizations`, `oauthProviders`, `billing` (Stripe, or AbacatePay *experimental*), `email` (Resend), `storage` (R2), `queues`, `publicApi`, `turnstile`, `sentry`, and `passkeys` *(experimental)*. Dependencies, env vars and rules for each are in the [configuration model](/docs/configuration-model#b7-fullstack).
 
 ## Documents
 
 | Document | Canonical for |
 |----------|---------------|
-| [architecture.md](architecture.md) | Component ownership, request flow, DB client lifecycle, module layout, scaling |
-| [authentication.md](authentication.md) | Better Auth lifecycle, sessions, rate limiting, authorization chain, tenant isolation |
-| [billing.md](billing.md) | Billing domain, provider mappings and limitations, webhook verification, event processing |
-| [infrastructure.md](infrastructure.md) | Docker Compose services, local development, secrets, deployment |
+| [architecture.md](/docs/stacks/fullstack/architecture) | Component ownership, request flow, DB client lifecycle, module layout, scaling |
+| [authentication.md](/docs/stacks/fullstack/authentication) | Better Auth lifecycle, sessions, rate limiting, authorization chain, tenant isolation |
+| [billing.md](/docs/stacks/fullstack/billing) | Billing domain, provider mappings and limitations, webhook verification, event processing |
+| [infrastructure.md](/docs/stacks/fullstack/infrastructure) | Docker Compose services, local development, secrets, deployment |

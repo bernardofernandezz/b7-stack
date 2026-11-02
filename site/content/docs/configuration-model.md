@@ -1,8 +1,10 @@
-# Configuration Model (v0.2)
+---
+title: "Configuration Model"
+---
 
-This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](../cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](../architecture-review.md#decisions-requiring-maintainer-approval).
+This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](https://github.com/bernardofernandezz/b7-stack/blob/main/cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#decisions-requiring-maintainer-approval).
 
-v0.2 reduces the model from 18 free dimensions to **one profile choice plus a few profile-specific options** (`A11`). Anything that can be inferred is **DERIVED** and cannot be set.
+The model is **one profile choice plus a few profile-specific options** (`A11`). Anything that can be inferred is **DERIVED** and cannot be set.
 
 ## Status vocabulary
 
@@ -12,7 +14,7 @@ v0.2 reduces the model from 18 free dimensions to **one profile choice plus a fe
 | **OPTIONAL** | A meaningful user choice. Off unless selected (or set to its listed default) |
 | **DERIVED** | Inferred from other selections. Not user-settable |
 | **EXPERIMENTAL** | Selectable, but with documented limitations. Not covered by the reference implementation |
-| **DEFERRED** | Not available in v0.2 |
+| **DEFERRED** | Not available yet |
 
 ## Model
 
@@ -61,7 +63,7 @@ type ApiGoOptions = {
 | Dimension | Status | Value / rule |
 |-----------|--------|--------------|
 | Language | CORE | TypeScript. **Go is never offered** |
-| Runtime / target | CORE | Node.js in Docker, served by srvx. Docker Compose runs `postgres`, `migrate`, `app` and `caddy` ([ADR-013](technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). pnpm for local tooling |
+| Runtime / target | CORE | Node.js in Docker, served by srvx. Docker Compose runs `postgres`, `migrate`, `app` and `caddy` ([ADR-013](/docs/technology-decisions#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). pnpm for local tooling |
 | Frontend | CORE | React, TanStack Start, TanStack Router, Tailwind CSS, Base UI, Lucide |
 | HTTP routing | CORE | TanStack Start server routes (`A1`) |
 | App RPC | CORE | oRPC + Zod, with an in-process client for SSR (`A2`) |
@@ -84,7 +86,7 @@ type ApiGoOptions = {
 | Email | OPTIONAL | `email` |
 | Storage | OPTIONAL | `storage` (S3-compatible) |
 | Queues | OPTIONAL | `queues` |
-| Transactional outbox | **DEFERRED** | Until a billing or domain side effect needs it ([billing](../stacks/fullstack/billing.md#transactional-outbox-deferred)) |
+| Transactional outbox | **DEFERRED** | Until a billing or domain side effect needs it ([billing](/docs/stacks/fullstack/billing#transactional-outbox-deferred)) |
 | Turnstile | OPTIONAL | `turnstile` |
 | Observability | CORE | Logs to stdout (`docker compose logs`) |
 | Sentry | OPTIONAL | `sentry` |
@@ -124,7 +126,7 @@ Package names are listed so the dependency surface is visible. Exact versions ar
 
 ## Rules
 
-The CLI **rejects** any configuration that breaks a rule. Because derived values cannot be set, most v0.1 rules disappear.
+The CLI **rejects** any configuration that breaks a rule. Derived values cannot be set.
 
 1. `profile = fullstack` admits only `FullstackOptions`. In particular, there is no `language`, `target`, `database` or backend choice.
 2. `organizations = true` ⇒ `email ≠ none`. Better Auth invitations need `sendInvitationEmail`.
@@ -133,7 +135,7 @@ The CLI **rejects** any configuration that breaks a rule. Because derived values
 5. `profile = api, language = go` admits only `ApiGoOptions`. SQLC is the data access when `database = postgresql`.
 6. `profile = intelligence` never includes a web frontend.
 
-**Removed from v0.1.** These are now impossible by construction: Go in Fullstack, a missing database for auth, D1 with Hyperdrive, SQLite on Workers, a billing provider without webhooks, `backendStrategy`, `runtime`, `backendFramework` and `apiCommunication`.
+**Impossible by construction:** Go in Fullstack, a missing database for auth, D1 with Hyperdrive, SQLite on Workers, a billing provider without webhooks, `backendStrategy`, `runtime`, `backendFramework` and `apiCommunication`.
 
 ## Representative configurations
 

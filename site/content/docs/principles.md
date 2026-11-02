@@ -1,4 +1,6 @@
-# Principles
+---
+title: "Principles"
+---
 
 Each principle comes with the decision rules it leads to. When two options are otherwise equal, these rules decide.
 
@@ -6,7 +8,7 @@ Each principle comes with the decision rules it leads to. When two options are o
 
 - Use the platform or the standard library before adding a dependency. Examples: Go `net/http`, Web `fetch`, `Request` and `Response`, Web Crypto.
 - Ship one deployable unit per product until there is a measured reason to split. Split only when you see independent scaling, a separate team, or a different runtime need.
-- Add no B7-specific wrappers around libraries. The only exceptions are thin seams with two or more real implementations, such as the [billing provider interface](../stacks/fullstack/billing.md).
+- Add no B7-specific wrappers around libraries. The only exceptions are thin seams with two or more real implementations, such as the [billing provider interface](/docs/stacks/fullstack/billing).
 - Every module is optional unless the profile cannot work without it.
 
 ## 2. Performance Matters
@@ -17,7 +19,7 @@ Each principle comes with the decision rules it leads to. When two options are o
 
 ## 3. Explicit Architecture
 
-- Every layer has one written responsibility. See [architecture](architecture.md).
+- Every layer has one written responsibility. See [architecture](/docs/architecture).
 - Use one routing system per concern. B7 never runs two HTTP servers inside one process.
 - Validate data at boundaries with schemas: Zod in TypeScript, explicit decoding in Go, Pydantic or typed parsing in Python.
 - Tenant scoping is visible in every query. It is never implied by global state.
@@ -30,7 +32,7 @@ Each principle comes with the decision rules it leads to. When two options are o
 
 ## 5. Production Ready
 
-- Security, testing and observability standards apply from the first commit. See the [security](standards/security.md), [testing](standards/testing.md) and [observability](standards/observability.md) standards.
+- Security, testing and observability standards apply from the first commit. See the [security](/docs/standards/security), [testing](/docs/standards/testing) and [observability](/docs/standards/observability) standards.
 - Secrets never go into source control or client bundles.
 - Webhook processing is verified, idempotent and safe to retry.
-- No paid service is mandatory. Paid integrations are opt-in, and their lock-in is documented in [technology decisions](technology-decisions.md).
+- No paid service is mandatory. Paid integrations are opt-in, and their lock-in is documented in [technology decisions](/docs/technology-decisions).

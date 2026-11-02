@@ -1,6 +1,8 @@
-# Authentication, Authorization and Tenant Isolation (v0.2)
+---
+title: "Authentication, Authorization and Tenant Isolation"
+---
 
-Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](../../architecture-review.md).
+Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has users and sessions. Organizations are **OPTIONAL**. Decision IDs and evidence are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md).
 
 ## Mounting and runtime
 
@@ -18,7 +20,7 @@ Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has user
 
 ## Instance lifecycle
 
-- `createAuth({ db, env })` builds **one** Better Auth instance per process, on the first request, next to the process-wide database pool (see [architecture](architecture.md#database-client-lifecycle)). The request middleware passes both in the request context.
+- `createAuth({ db, env })` builds **one** Better Auth instance per process, on the first request, next to the process-wide database pool (see [architecture](/docs/stacks/fullstack/architecture#database-client-lifecycle)). The request middleware passes both in the request context.
 - That example is not an explicit endorsement of per-request instances. **UNVERIFIED:** the CPU cost of construction (test `BA-T1`).
 - Plugins and access-control statements are defined at module scope (they are pure configuration), and only the database and secrets are injected per request.
 
@@ -30,7 +32,7 @@ Better Auth is **CORE** in B7 Fullstack (`A5`): every Fullstack project has user
 | `session.cookieCache` | **Disabled** (`A6`) | When enabled, revocation (sign-out, ban, removal) is not seen until the cache expires ([session management](https://www.better-auth.com/docs/concepts/session-management)). Enable it only as a measured optimization with `maxAge` ≤ 5 min, and document the window |
 | `secondaryStorage` | **DEFERRED** | It would need KV, which is eventually consistent and offers no atomic increment |
 | Expiry | Better Auth defaults (`expiresIn` 7 days, refreshed per `updateAge`) | Documented defaults |
-| Cookie attributes | Better Auth defaults (`HttpOnly`, `Secure`) | See [security standard](../../docs/standards/security.md#sessions-and-authentication) |
+| Cookie attributes | Better Auth defaults (`HttpOnly`, `Secure`) | See [security standard](/docs/standards/security#sessions-and-authentication) |
 | Fresh session | Better Auth `freshAge` (1 day) for sensitive actions | Documented default |
 
 Cost: `GET /get-session` refreshes sessions with database writes, and without the cookie cache, every authenticated request reads the session from PostgreSQL ([session management](https://www.better-auth.com/docs/concepts/session-management)). That is accepted for correctness.
@@ -80,7 +82,7 @@ Procedures that act on a specific resource load that resource **with** `organiza
 
 Initial active organization: creating an organization or accepting an invitation makes it active (Better Auth does this). A user with none sees "Create your organization". Step 2 still applies.
 
-Invitations require the plugin's `sendInvitationEmail` callback, so **organizations ⇒ email** is a hard rule (see the [configuration model](../../docs/configuration-model.md#rules)).
+Invitations require the plugin's `sendInvitationEmail` callback, so **organizations ⇒ email** is a hard rule (see the [configuration model](/docs/configuration-model#rules)).
 
 ## Tenant isolation
 
@@ -92,4 +94,4 @@ Invitations require the plugin's `sendInvitationEmail` callback, so **organizati
 
 ## Acceptance tests
 
-`BA-T1`, `BA-T2`, `W-1`, `H-T1` (revocation is immediate), `H-T2` (removed member is rejected), `M-T1`–`M-T4`. Definitions are in [architecture-review.md](../../architecture-review.md#required-acceptance-tests).
+`BA-T1`, `BA-T2`, `W-1`, `H-T1` (revocation is immediate), `H-T2` (removed member is rejected), `M-T1`–`M-T4`. Definitions are in [architecture-review.md](https://github.com/bernardofernandezz/b7-stack/blob/main/architecture-review.md#required-acceptance-tests).

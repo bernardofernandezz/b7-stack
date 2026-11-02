@@ -1,6 +1,8 @@
-# Architecture
+---
+title: "Architecture"
+---
 
-This document defines how B7 is structured as an ecosystem: the layers, the boundaries between them, and how profiles relate. The internal architecture of the SaaS profile is in [stacks/fullstack/architecture.md](../stacks/fullstack/architecture.md).
+This document defines how B7 is structured as an ecosystem: the layers, the boundaries between them, and how profiles relate. The internal architecture of the SaaS profile is in [stacks/fullstack/architecture.md](/docs/stacks/fullstack/architecture).
 
 ## Layers
 
@@ -19,7 +21,7 @@ This document defines how B7 is structured as an ecosystem: the layers, the boun
 ```
 
 - **Profile.** Chooses defaults and limits the valid values of every configuration dimension. It does not add runtime code.
-- **Modules.** A module is a configuration choice that brings its dependencies, environment variables, config files and application code (for example `src/modules/billing/`). Modules depend on each other only through rules listed in the [configuration model](configuration-model.md#rules).
+- **Modules.** A module is a configuration choice that brings its dependencies, environment variables, config files and application code (for example `src/modules/billing/`). Modules depend on each other only through rules listed in the [configuration model](/docs/configuration-model#rules).
 - **Frameworks.** Application code calls frameworks directly. B7 conventions decide where that code lives, not how the framework is called.
 - **Services.** Each external service sits behind the module that uses it. Only the billing module has a provider interface, because it has two real implementations. Email uses a single function seam so the provider can be replaced.
 - **Infrastructure.** Each profile has one default deployment target. The deployment target is a configuration dimension, not an assumption baked into application code.
@@ -39,7 +41,7 @@ This document defines how B7 is structured as an ecosystem: the layers, the boun
 
 Profiles are independent. They share standards and the configuration model, not code.
 
-- **Web** and **Fullstack** both use TanStack Start. Fullstack adds oRPC, Better Auth, PostgreSQL and SaaS modules, and fixes the deployment target to Docker Compose ([ADR-013](technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Hono is not used in Fullstack ([ADR-002](technology-decisions.md#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1)).
+- **Web** and **Fullstack** both use TanStack Start. Fullstack adds oRPC, Better Auth, PostgreSQL and SaaS modules, and fixes the deployment target to Docker Compose ([ADR-013](/docs/technology-decisions#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Hono is not used in Fullstack ([ADR-002](/docs/technology-decisions#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1)).
 - **API** is the profile for a backend that must stand alone, either because it is not tied to a B7 frontend or because it needs Go. A Fullstack product that later needs a separate service can add one built on the API profile.
 - **Systems** and **Intelligence** do not depend on the web stack. Intelligence models can be exported to ONNX and run inside API or Systems services where ONNX Runtime supports the platform.
 
@@ -53,4 +55,4 @@ Profiles are independent. They share standards and the configuration model, not 
 
 ## Scaling stance
 
-Start as one deployable unit with clear internal modules. Extract a service only when a module needs a different runtime (Python ML, a Go hot path), scales independently, or belongs to a separate team. The extracted service uses the profile that fits it, usually [B7 API](../stacks/api/README.md).
+Start as one deployable unit with clear internal modules. Extract a service only when a module needs a different runtime (Python ML, a Go hot path), scales independently, or belongs to a separate team. The extracted service uses the profile that fits it, usually [B7 API](/docs/stacks/api).

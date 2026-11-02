@@ -1,0 +1,91 @@
+name: create-b7
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Packs create-b7 the way npm publishes it, generates a project and runs that project's checks and Docker stack.
+jobs:
+  generated-project:
+    name: generated-project (${{ matrix.config.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        config:
+          - { name: minimal, args: "--email none" }
+          - { name: email, args: "--email resend" }
+          - { name: organizations, args: "--organizations" }
+          - { name: billing, args: "--billing stripe" }
+          - { name: b2b-saas, args: "--organizations --email resend --billing stripe" }
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: b7 }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres -d b7" --health-interval 2s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.16.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26 }
+      - run: pnpm install && pnpm test
+        working-directory: cli
+      - run: npm pack
+        working-directory: cli
+      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - run: |
+          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
+          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+        working-directory: ${{ runner.temp }}
+      - name: Check generated project
+        working-directory: ${{ runner.temp }}/demo-app
+        # The generated .env has a random password; the CI database uses its own. Variables win over .env.
+        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/b7" }
+        run: |
+          pnpm run typecheck
+          pnpm run lint
+          pnpm run db:migrate
+          pnpm run test
+          pnpm run build
+          pnpm exec playwright install --with-deps chromium
+          pnpm run test:e2e
+
+  generated-stack:
+    name: generated-stack (${{ matrix.config.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Representative configurations (docs/configuration-model.md), plus each option on its own.
+        config:
+          - { name: minimal, args: "--email none" }
+          - { name: email, args: "--email resend" }
+          - { name: organizations, args: "--organizations" }
+          - { name: billing, args: "--billing stripe" }
+          - { name: b2b-saas, args: "--organizations --email resend --billing stripe" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 12.16.1 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26 }
+      - run: pnpm install && npm pack
+        working-directory: cli
+      # The glob is expanded on its own: inside "--package=..." bash would not match it.
+      - run: |
+          TARBALL=$(ls "$GITHUB_WORKSPACE"/cli/create-b7-*.tgz)
+          npm exec --yes --package="$TARBALL" -- create-b7 demo-app --yes --no-git ${{ matrix.config.args }}
+        working-directory: ${{ runner.temp }}
+      - name: Run the Compose stack and E2E through Caddy
+        working-directory: ${{ runner.temp }}/demo-app
+        run: |
+          docker compose up -d --build --wait
+          pnpm exec playwright install --with-deps chromium
+          # Auth rate limits are real through Caddy, so only the production-stack flows run here (see the template CI).
+          BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation billing
+      - if: failure()
+        working-directory: ${{ runner.temp }}/demo-app
+        run: docker compose logs

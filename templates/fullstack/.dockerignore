@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.git
+.github
+.tanstack
+test-results
+playwright-report

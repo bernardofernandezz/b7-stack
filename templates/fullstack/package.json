@@ -1,0 +1,59 @@
+{
+  "name": "b7-fullstack",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "srvx serve --prod --entry dist/server/server.js --static ../client",
+    "preview": "pnpm run build && pnpm run start",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:generate": "drizzle-kit generate --name",
+    "db:migrate": "drizzle-kit migrate",
+    "auth:schema": "pnpm dlx auth@1.7.14 generate --config scripts/auth-cli.ts --output src/modules/auth/schema.ts --yes && biome check --write src/modules/auth/schema.ts"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.9.0",
+    "@orpc/client": "^1.16.1",
+    "@orpc/server": "^1.16.1",
+    "@orpc/tanstack-query": "^1.16.1",
+    "@tanstack/react-query": "^5.105.0",
+    "@tanstack/react-router": "^1.170.46",
+    "@tanstack/react-router-ssr-query": "^1.167.3",
+    "@tanstack/react-start": "^1.169.4",
+    "better-auth": "^1.7.14",
+    "drizzle-orm": "^0.45.4",
+    "lucide-react": "^1.65.0",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "resend": "^6.35.0",
+    "srvx": "^1.0.8",
+    "stripe": "^23.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "drizzle-kit": "^0.31.11",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^4.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

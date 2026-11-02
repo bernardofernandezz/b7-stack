@@ -1,190 +1,160 @@
-# Configuration Model
+# Configuration Model (v0.2)
 
-This document is the **single source of truth** for what a B7 project can contain. Profile documents describe intent and recommendations, and this document defines what is valid. The future [`create-b7`](../cli/README.md) CLI implements these rules as written.
+This document is the **single source of truth** for what a B7 project may contain. The [`create-b7`](../cli/README.md) CLI will implement exactly these rules. Decision IDs (`A…`) are explained in [architecture-review.md](../architecture-review.md#decisions-requiring-maintainer-approval).
+
+v0.2 reduces the model from 18 free dimensions to **one profile choice plus a few profile-specific options** (`A11`). Anything that can be inferred is **DERIVED** and cannot be set.
+
+## Status vocabulary
+
+| Status | Meaning |
+|--------|---------|
+| **CORE** | Always included in the profile. Not a choice |
+| **OPTIONAL** | A meaningful user choice. Off unless selected (or set to its listed default) |
+| **DERIVED** | Inferred from other selections. Not user-settable |
+| **EXPERIMENTAL** | Selectable, but with documented limitations. Not covered by the reference implementation |
+| **DEFERRED** | Not available in v0.2 |
 
 ## Model
 
-A configuration is a profile plus one value per dimension. Every dimension has a profile default, and `"none"` (or an empty list) means nothing for that dimension is installed.
-
 ```ts
-type B7Config = {
-  profile: "web" | "api" | "systems" | "intelligence" | "fullstack";
-  language: "typescript" | "go" | "python";
-  runtime: "bun" | "workers" | "go" | "python";
-  frontend: "tanstack-start" | "none";
-  backendStrategy: "start-server" | "hono-orpc" | "hono-orpc-with-start" | "standalone" | "none";
-  backendFramework: "hono" | "net-http" | "none";
-  apiCommunication: ("orpc" | "openapi" | "rest")[];
-  database: "postgresql" | "d1" | "sqlite" | "none";
-  dataAccess: "drizzle" | "sqlc" | "database-sql" | "none";
-  auth: "better-auth" | "none";
-  authorization: "roles" | "organizations" | "none"; // "organizations" includes roles per org
-  billing: "stripe" | "abacatepay" | "none";
-  email: "resend" | "none";
-  storage: "r2" | "none";
-  jobs: { queues: boolean; cron: boolean };
-  infrastructure: {
-    target: "cloudflare-workers" | "docker" | "binary";
-    services: ("hyperdrive" | "kv" | "durable-objects" | "turnstile")[];
-    ci: "github-actions" | "none";
-  };
-  testing: ("vitest" | "playwright" | "go-test" | "pytest")[];
-  observability: ("workers-observability" | "opentelemetry" | "sentry")[];
+type B7Config =
+  | { profile: "fullstack"; options: FullstackOptions }
+  | { profile: "web";       options: WebOptions }
+  | { profile: "api";       options: ApiTsOptions | ApiGoOptions }
+  | { profile: "systems";   options: { sqlite: boolean } }
+  | { profile: "intelligence"; options: { serving: "none" | "http" } };
+
+type FullstackOptions = {
+  organizations: boolean;                      // default false
+  oauthProviders: string[];                    // default []
+  billing: "none" | "stripe" | "abacatepay";   // default "none"; abacatepay is EXPERIMENTAL
+  email: "none" | "resend";                    // default "resend" (the CLI default; required by organizations)
+  storage: "none" | "s3";                      // default "none"; any S3-compatible service (MinIO, R2, S3)
+  queues: boolean;                             // default false; a `worker` Compose service
+  publicApi: boolean;                          // default false: oRPC OpenAPIHandler at /api/v1
+  turnstile: boolean;                          // default false
+  sentry: boolean;                             // default false
+  passkeys: boolean;                           // default false; EXPERIMENTAL
+};
+
+type WebOptions = {
+  target: "docker" | "cloudflare-workers";     // default "docker"
+  database: "none" | "postgresql";             // default "none"
+};
+
+type ApiTsOptions = {
+  language: "typescript";
+  target: "docker" | "cloudflare-workers";     // default "docker"
+  database: "none" | "postgresql";             // default "none"
+  publicApi: boolean;                          // default true: OpenAPI
+};
+
+type ApiGoOptions = {
+  language: "go";
+  database: "none" | "postgresql";             // default "none"
+  openapi: boolean;                            // default true: spec maintained with the handlers
 };
 ```
 
-Field names are deliberately simple. Intelligence-specific choices (ML libraries) are listed in [stacks/intelligence](../stacks/intelligence/README.md#configuration) and are not part of the shared model.
+## B7 Fullstack
 
-## Allowed values per profile
+| Dimension | Status | Value / rule |
+|-----------|--------|--------------|
+| Language | CORE | TypeScript. **Go is never offered** |
+| Runtime / target | CORE | Node.js in Docker, served by srvx. Docker Compose runs `postgres`, `migrate`, `app` and `caddy` ([ADR-013](technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). pnpm for local tooling |
+| Frontend | CORE | React, TanStack Start, TanStack Router, Tailwind CSS, Base UI, Lucide |
+| HTTP routing | CORE | TanStack Start server routes (`A1`) |
+| App RPC | CORE | oRPC + Zod, with an in-process client for SSR (`A2`) |
+| Public REST / OpenAPI | OPTIONAL | `publicApi` |
+| Hono | **DEFERRED** in Fullstack (`A1`) | CORE in B7 API (TypeScript) |
+| Server functions for business logic | **DEFERRED** (`A2`) | — |
+| Database | CORE | PostgreSQL |
+| Data access | CORE | Drizzle + `pg` |
+| Connection pool | CORE | One `pg` pool per process (`DATABASE_POOL_MAX`, default 10) |
+| Reverse proxy | CORE | Caddy: TLS (automatic for a public `APP_URL`) and the only source of `X-Forwarded-For` |
+| Query cache | **DEFERRED** | Requires a measured, named, staleness-tolerant read path |
+| D1 | **DEFERRED** in Fullstack (`A3`) | — |
+| Authentication | CORE | Better Auth, email + password, database sessions (`A5`) |
+| Organizations | OPTIONAL | `organizations` |
+| OAuth providers | OPTIONAL | `oauthProviders` |
+| Passkeys | EXPERIMENTAL | `passkeys` |
+| Teams, dynamic roles | **DEFERRED** | — |
+| Billing | OPTIONAL | `billing`. Stripe is the reference, and AbacatePay is EXPERIMENTAL (`A7`) |
+| Scheduler service | DERIVED | A `scheduler` Compose service that calls the app's internal reconcile endpoint daily, enabled when `billing ≠ none` (`A9`) |
+| Email | OPTIONAL | `email` |
+| Storage | OPTIONAL | `storage` (S3-compatible) |
+| Queues | OPTIONAL | `queues` |
+| Transactional outbox | **DEFERRED** | Until a billing or domain side effect needs it ([billing](../stacks/fullstack/billing.md#transactional-outbox-deferred)) |
+| Turnstile | OPTIONAL | `turnstile` |
+| Observability | CORE | Logs to stdout (`docker compose logs`) |
+| Sentry | OPTIONAL | `sentry` |
+| OpenTelemetry export | **DEFERRED** in Fullstack | — |
+| Testing | CORE | Vitest (Node) + Playwright, including E2E against the Compose stack |
+| CI/CD | CORE | GitHub Actions: check, migrate, test, build images, E2E against the Compose stack |
 
-**Bold** marks the default. `—` means the dimension is fixed to `none` or does not apply.
+### Fullstack features: what each one adds
 
-| Dimension | Web | API | Systems | Intelligence | Fullstack |
-|-----------|-----|-----|---------|--------------|-----------|
-| language | **typescript** | **typescript**, go | **go** | **python** | **typescript** (only) |
-| runtime | **bun**, workers | **bun**, workers (TS), **go** (Go) | **go** | **python** | **workers** (only) |
-| frontend | **tanstack-start** | — | — | — | **tanstack-start** |
-| backendStrategy | **start-server** | **standalone** | — | none, standalone | start-server, hono-orpc, **hono-orpc-with-start** |
-| backendFramework | — | **hono** (TS), **net-http** (Go) | — | — | **hono** (when the strategy includes Hono) |
-| apiCommunication | — | **orpc** (TS), openapi, rest; **rest** (Go), openapi | — | rest | **orpc**, openapi, rest |
-| database | **none**, postgresql, d1, sqlite | **none**, postgresql, sqlite, d1 (TS on Workers) | **none**, sqlite | **none**, postgresql, sqlite | **postgresql**, d1, none |
-| dataAccess | drizzle | drizzle (TS), sqlc (Go + PostgreSQL), database-sql (Go + SQLite) | database-sql | (see Intelligence) | **drizzle** |
-| auth | **none**, better-auth | **none**, better-auth (TS) | — | — | **better-auth**, none |
-| authorization | none, roles | none, roles (TS) | — | — | none, **roles**, organizations |
-| billing | — | — | — | — | **none**, stripe, abacatepay |
-| email | none, resend | none, resend | — | — | **none**, resend |
-| storage | none, r2 (workers) | none, r2 (workers) | — | — | **none**, r2 |
-| jobs | — | queues, cron (workers) | — | — | **none**; queues, cron |
-| infrastructure.target | **docker**, cloudflare-workers | **docker**, cloudflare-workers (TS), binary (Go) | **binary**, docker | **docker** | **cloudflare-workers** (only) |
-| infrastructure.services | kv, turnstile (workers) | hyperdrive, kv, durable-objects (workers) | — | — | hyperdrive (default with postgresql), kv, durable-objects, turnstile |
-| testing | **vitest**, playwright | **vitest** (TS), **go-test** (Go) | **go-test** | **pytest** | **vitest**, **playwright** |
-| observability | opentelemetry, sentry, workers-observability (workers) | **opentelemetry**, sentry, workers-observability (workers) | none | none | **workers-observability**, sentry, opentelemetry |
+| Feature | Packages / config | Env vars and bindings *(secret)* | External service |
+|---------|-------------------|-------------------------------|------------------|
+| core | `@tanstack/react-start`, `@tanstack/react-router`, `@tanstack/react-query`, `@tanstack/react-router-ssr-query`, `react`, `react-dom`, `srvx`, `@orpc/server`, `@orpc/client`, `@orpc/tanstack-query`, `zod`, `better-auth`, `drizzle-orm`, `drizzle-kit`, `pg`, `tailwindcss`, `@base-ui/react`, `lucide-react`, `vitest`, `@playwright/test`, `@biomejs/biome`. `Dockerfile` (`migrate`, `runtime`), `compose.yaml`, `Caddyfile` | `DATABASE_URL`, `POSTGRES_PASSWORD` *(secret)*, `BETTER_AUTH_SECRET` *(secret)*, `BETTER_AUTH_URL`, `APP_URL` | A host with Docker |
+| `organizations` | Better Auth `organization` plugin, `requireMembership` and `requirePermission` middleware | — | — |
+| `oauthProviders[p]` | provider config | `<P>_CLIENT_ID`, `<P>_CLIENT_SECRET` *(secret)* | The OAuth provider |
+| `passkeys` | Better Auth passkey plugin | — | — |
+| `billing: stripe` | `stripe`, `modules/billing` (Stripe adapter), webhook route, internal reconcile route, `scheduler` service | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)*, `STRIPE_PRICE_PRO`, `CRON_SECRET` *(secret)* | Stripe |
+| `billing: abacatepay` | `modules/billing` (AbacatePay adapter, `fetch`), webhook route, `scheduler` service | `ABACATEPAY_API_KEY` *(secret)*, `ABACATEPAY_WEBHOOK_SECRET` *(secret)* | AbacatePay |
+| `email: resend` | `resend`, `modules/email/send.ts` | `RESEND_API_KEY` *(secret; optional in local dev, where emails are logged instead)*, `EMAIL_FROM` | Resend + a verified domain |
+| `storage: s3` | S3 client, `modules/storage` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` *(secret)* | Any S3-compatible service |
+| `queues` | Job producer, a `worker` Compose service consuming it, a dead-letter path | — | — |
+| `publicApi` | `@orpc/openapi`, route `api/v1.$.ts` | — | — |
+| `turnstile` | widget + server verification | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` *(secret)* | Cloudflare Turnstile |
+| `sentry` | `@sentry/node` | `SENTRY_DSN` | Sentry |
+| CI | `.github/workflows/ci.yml` (checks, then the Compose stack with E2E) | — | GitHub |
 
-B7 Fullstack has a single language: **Go is never offered in B7 Fullstack.** A product that needs a Go service adds a separate [B7 API](../stacks/api/README.md) project.
+Package names are listed so the dependency surface is visible. Exact versions are pinned by the reference implementation, not by this document.
 
-### Fullstack backend strategies
+## Other profiles
 
-| Value | Meaning |
-|-------|---------|
-| `start-server` | TanStack Start server functions and server routes only. No Hono and no oRPC. Use it for products with no public API and no webhooks. |
-| `hono-orpc` | Hono owns all `/api/*` traffic, oRPC is mounted inside Hono, and Start handles rendering and routing only. |
-| `hono-orpc-with-start` (**default**) | The same as `hono-orpc`, and Start server functions are also allowed for page-level data loading and mutations that do not need a public contract. See [fullstack architecture](../stacks/fullstack/architecture.md#responsibilities). |
+| Profile | CORE | OPTIONAL | DERIVED | DEFERRED |
+|---------|------|----------|---------|----------|
+| **Web** | TS, React, TanStack Start (server functions + server routes), Tailwind, Base UI, Lucide, Node.js, Vitest | `target`; `database` (PostgreSQL + Drizzle + `pg`) | Hyperdrive (cache disabled) when `target = workers` and `database = postgresql` | Auth (use Fullstack), SQLite, D1, Playwright as a default |
+| **API (TS)** | Hono (`@hono/node-server` on Node.js), oRPC + Zod, Node.js, Vitest | `target`; `database` (PostgreSQL + Drizzle + `pg`); `publicApi` | Hyperdrive (cache disabled) on Workers | Auth (`A11`), D1, SQLite |
+| **API (Go)** | `net/http`, `log/slog`, `go test`, Docker or binary | `database` (PostgreSQL + **SQLC** + pgx); `openapi` | — | Auth, SQLite |
+| **Systems** | Go, `flag`, `log/slog`, `go test`, single binary | `sqlite` (`database/sql`) | — | — |
+| **Intelligence** | Python, `uv`, PyTorch, scikit-learn, Hugging Face, pytest, Docker | `serving` (`http` adds an HTTP service; ONNX Runtime for exported models) | — | Workers as a target |
 
-## Features
+## Rules
 
-Each feature installs only what is listed. Environment variables marked *(secret)* must be set with `wrangler secret put` (Workers) or the platform's secret store, and never in committed files.
+The CLI **rejects** any configuration that breaks a rule. Because derived values cannot be set, most v0.1 rules disappear.
 
-| Feature | Installs (packages / config) | Env vars and bindings | External service | Requires |
-|---------|------------------------------|-----------------------|------------------|----------|
-| tanstack-start | `@tanstack/react-start`, `@tanstack/react-router`, `react`, `react-dom`, Vite; `@cloudflare/vite-plugin` on Workers | — | — | language = typescript |
-| tanstack-query | `@tanstack/react-query` (plus `@orpc/tanstack-query` with oRPC) | — | — | frontend |
-| hono | `hono` | — | — | typescript |
-| orpc | `@orpc/server`, `@orpc/client`, `zod`; `@orpc/openapi` if openapi | — | — | typescript; hono or tanstack-start |
-| net-http | Go standard library | `PORT` | — | go |
-| postgresql + drizzle | `drizzle-orm`, `drizzle-kit`, `pg` | `DATABASE_URL` *(secret; direct connection, used by migrations and non-Workers runtimes)* | A PostgreSQL host | typescript |
-| hyperdrive | `hyperdrive` binding in `wrangler.jsonc`; `nodejs_compat` flag | `HYPERDRIVE` binding; `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` for local dev | Cloudflare Hyperdrive | postgresql, target = cloudflare-workers |
-| d1 + drizzle | `drizzle-orm`, `drizzle-kit`; `d1_databases` binding | `DB` binding | Cloudflare D1 | target = cloudflare-workers |
-| sqlite (TS) | `drizzle-orm` with Bun's built-in `bun:sqlite` driver | `DATABASE_PATH` | — | runtime = bun |
-| sqlc | `sqlc.yaml`, `sqlc` CLI (dev tool), `pgx` | `DATABASE_URL` *(secret)* | A PostgreSQL host | go, postgresql |
-| sqlite (Go) | `database/sql` + a SQLite driver | `DATABASE_PATH` | — | go |
-| better-auth | `better-auth`; auth tables in the Drizzle schema | `BETTER_AUTH_SECRET` *(secret)*, `BETTER_AUTH_URL` | — | typescript, database ≠ none |
-| auth: OAuth provider (each) | provider config in the auth module | `<PROVIDER>_CLIENT_ID`, `<PROVIDER>_CLIENT_SECRET` *(secret)* | The OAuth provider | better-auth |
-| auth: passkeys | the Better Auth passkey plugin | — | — | better-auth |
-| authorization: roles | Better Auth access control (`createAccessControl`) | — | — | better-auth |
-| authorization: organizations | the Better Auth `organization` plugin, with invitations | — | — | better-auth; email ≠ none recommended (invitations) |
-| billing: stripe | `stripe`; `src/modules/billing` with the Stripe adapter | `STRIPE_SECRET_KEY` *(secret)*, `STRIPE_WEBHOOK_SECRET` *(secret)* | Stripe account | database ≠ none, auth ≠ none, backendFramework = hono |
-| billing: abacatepay | `src/modules/billing` with the AbacatePay adapter (plain `fetch`, no SDK required) | `ABACATEPAY_API_KEY` *(secret)*, `ABACATEPAY_WEBHOOK_SECRET` *(secret)* | AbacatePay account | database ≠ none, auth ≠ none, backendFramework = hono |
-| email: resend | `resend`; `src/modules/email/send.ts` | `RESEND_API_KEY` *(secret)*, `EMAIL_FROM` | Resend account and a verified domain | — |
-| storage: r2 | `r2_buckets` binding | `BUCKET` binding | Cloudflare R2 | target = cloudflare-workers |
-| jobs: queues | `queues.producers` / `queues.consumers` in Wrangler; a `queue` handler in the server entry | `JOBS` binding | Cloudflare Queues | target = cloudflare-workers |
-| jobs: cron | `triggers.crons` in Wrangler; a `scheduled` handler in the server entry | — | — | target = cloudflare-workers |
-| kv | `kv_namespaces` binding | `KV` binding | Cloudflare KV | target = cloudflare-workers |
-| durable-objects | `durable_objects` binding and migration; the class exported from the server entry | binding per class | — | target = cloudflare-workers |
-| turnstile | client widget, plus server verification in the auth/form handlers | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` *(secret)* | Cloudflare Turnstile | target = cloudflare-workers or any HTTPS host |
-| workers-observability | `observability.enabled: true` in Wrangler | — | — | target = cloudflare-workers |
-| sentry | the Sentry SDK for the runtime (`@sentry/cloudflare` on Workers) | `SENTRY_DSN` | Sentry (paid tiers optional) | — |
-| opentelemetry | the OTel SDK for the runtime | `OTEL_EXPORTER_OTLP_ENDPOINT` | An OTLP-compatible backend | — |
-| vitest | `vitest`; `@cloudflare/vitest-pool-workers` on Workers | — | — | typescript |
-| playwright | `@playwright/test` | `BASE_URL` | — | frontend |
-| github-actions | `.github/workflows/ci.yml`; `deploy.yml` for Workers | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (repository secrets) | GitHub | — |
+1. `profile = fullstack` admits only `FullstackOptions`. In particular, there is no `language`, `target`, `database` or backend choice.
+2. `organizations = true` ⇒ `email ≠ none`. Better Auth invitations need `sendInvitationEmail`.
+3. `billing ≠ none` ⇒ the `scheduler` Compose service is generated (derived).
+4. `passkeys = true` or `billing = abacatepay` ⇒ the CLI prints an EXPERIMENTAL notice that links to the limitations.
+5. `profile = api, language = go` admits only `ApiGoOptions`. SQLC is the data access when `database = postgresql`.
+6. `profile = intelligence` never includes a web frontend.
 
-## Compatibility rules
-
-**Hard rules.** The CLI rejects any configuration that breaks one of these.
-
-1. `profile = fullstack` ⇒ `language = typescript`, `runtime = workers`, `infrastructure.target = cloudflare-workers`, `frontend = tanstack-start`.
-2. `profile = fullstack` ⇒ `backendStrategy ∈ {start-server, hono-orpc, hono-orpc-with-start}`.
-3. `backendStrategy = start-server` ⇒ `backendFramework = none`, and `billing = none`. Billing webhooks require Hono (see rule 8). This keeps a single HTTP layer.
-4. `language = go` ⇒ `profile ∈ {api, systems}`, and `dataAccess ∈ {sqlc, database-sql}`. Drizzle, oRPC and Better Auth are TypeScript-only.
-5. `dataAccess = sqlc` ⇒ `database = postgresql`.
-6. `database = d1`, or `infrastructure.services` containing `hyperdrive`, `kv` or `durable-objects`, or `storage = r2`, or `jobs.queues`/`jobs.cron` set to true ⇒ `infrastructure.target = cloudflare-workers`. Turnstile works on any HTTPS host.
-7. `services` includes `hyperdrive` ⇒ `database = postgresql`. Hyperdrive and D1 are mutually exclusive as the primary database.
-8. `billing ≠ none` ⇒ `database ≠ none`, `auth ≠ none`, `backendFramework = hono`.
-9. `auth = better-auth` ⇒ `language = typescript`, `database ≠ none`.
-10. `authorization ≠ none` ⇒ `auth ≠ none`.
-11. `billing = stripe` and `billing = abacatepay` are exclusive. The model holds a single value, and the unselected provider is never installed.
-12. `playwright` ⇒ `frontend ≠ none`.
-13. `profile = intelligence` ⇒ `frontend = none`. It never depends on the web stack.
-
-**Recommendations.** The CLI warns but does not reject.
-
-- `authorization = organizations` without `email = resend`: invitations need some way to send email.
-- `billing ≠ none` without `jobs.queues`: entitlement sync after webhooks should be retried through a queue. See [billing](../stacks/fullstack/billing.md#processing-pipeline).
-- `database = d1` with `authorization = organizations`: **Uncertain:** test Better Auth's organization plugin on D1 before you rely on it. Production use of this combination is not documented.
-- Redis is not a configuration value. On Workers, use KV or Durable Objects. On containers, add Redis by hand only when there is a documented reason (see [technology decisions](technology-decisions.md#redis)).
+**Removed from v0.1.** These are now impossible by construction: Go in Fullstack, a missing database for auth, D1 with Hyperdrive, SQLite on Workers, a billing provider without webhooks, `backendStrategy`, `runtime`, `backendFramework` and `apiCommunication`.
 
 ## Representative configurations
 
-**1. Minimal SaaS (Fullstack defaults, no billing)**
-```json
-{ "profile": "fullstack", "language": "typescript", "runtime": "workers",
-  "frontend": "tanstack-start", "backendStrategy": "hono-orpc-with-start", "backendFramework": "hono",
-  "apiCommunication": ["orpc"], "database": "postgresql", "dataAccess": "drizzle",
-  "auth": "better-auth", "authorization": "roles", "billing": "none", "email": "none", "storage": "none",
-  "jobs": { "queues": false, "cron": false },
-  "infrastructure": { "target": "cloudflare-workers", "services": ["hyperdrive"], "ci": "github-actions" },
-  "testing": ["vitest", "playwright"], "observability": ["workers-observability"] }
+```jsonc
+// 1. Minimal SaaS: users, sessions, PostgreSQL. One Worker, one binding.
+{ "profile": "fullstack", "options": {} }
+
+// 2. B2B SaaS, international (reference implementation scope)
+{ "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "stripe" } }
+
+// 3. B2B SaaS, Brazil (experimental billing)
+{ "profile": "fullstack", "options": { "organizations": true, "email": "resend", "billing": "abacatepay", "storage": "s3", "queues": true } }
+
+// 4. Go service with PostgreSQL
+{ "profile": "api", "options": { "language": "go", "database": "postgresql", "openapi": true } }
+
+// 5. TypeScript edge API
+{ "profile": "api", "options": { "language": "typescript", "target": "cloudflare-workers", "database": "postgresql" } }
 ```
 
-**2. B2B SaaS, Brazil**: organizations, AbacatePay, email, queues, storage.
-```json
-{ "profile": "fullstack", "backendStrategy": "hono-orpc-with-start",
-  "apiCommunication": ["orpc", "openapi"], "database": "postgresql",
-  "auth": "better-auth", "authorization": "organizations", "billing": "abacatepay",
-  "email": "resend", "storage": "r2", "jobs": { "queues": true, "cron": true },
-  "infrastructure": { "target": "cloudflare-workers", "services": ["hyperdrive", "turnstile"], "ci": "github-actions" },
-  "observability": ["workers-observability", "sentry"] }
-```
-Unlisted fields take the Fullstack defaults.
-
-**3. International SaaS**: the same as 2, with `"billing": "stripe"`.
-
-**4. Content site with server logic (Web)**
-```json
-{ "profile": "web", "runtime": "bun", "frontend": "tanstack-start", "backendStrategy": "start-server",
-  "database": "none", "auth": "none", "infrastructure": { "target": "docker", "services": [], "ci": "github-actions" },
-  "testing": ["vitest"] }
-```
-
-**5. Go service with PostgreSQL (API)**
-```json
-{ "profile": "api", "language": "go", "runtime": "go", "backendStrategy": "standalone",
-  "backendFramework": "net-http", "apiCommunication": ["rest", "openapi"],
-  "database": "postgresql", "dataAccess": "sqlc",
-  "infrastructure": { "target": "docker", "services": [], "ci": "github-actions" },
-  "testing": ["go-test"], "observability": ["opentelemetry"] }
-```
-
-**6. Edge API in TypeScript (API)**
-```json
-{ "profile": "api", "language": "typescript", "runtime": "workers", "backendFramework": "hono",
-  "apiCommunication": ["orpc", "openapi"], "database": "d1", "dataAccess": "drizzle",
-  "infrastructure": { "target": "cloudflare-workers", "services": [], "ci": "github-actions" },
-  "testing": ["vitest"], "observability": ["workers-observability"] }
-```
-
-**Invalid examples**
-- `{ "profile": "fullstack", "language": "go" }` breaks rule 1.
-- `{ "profile": "fullstack", "backendStrategy": "start-server", "billing": "stripe" }` breaks rule 3.
-- `{ "profile": "api", "language": "go", "dataAccess": "drizzle" }` breaks rule 4.
-- `{ "profile": "api", "infrastructure": { "target": "docker" }, "storage": "r2" }` breaks rule 6.
+**Rejected examples**
+- `{ "profile": "fullstack", "options": { "language": "go" } }`: no such option (rule 1).
+- `{ "profile": "fullstack", "options": { "organizations": true } }`: rule 2 (email required).
+- `{ "profile": "api", "options": { "language": "go", "publicApi": true } }`: not a Go option (rule 5).

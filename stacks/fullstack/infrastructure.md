@@ -1,105 +1,74 @@
-# B7 Fullstack Infrastructure
+# B7 Fullstack Infrastructure (v0.2)
 
-The deployment target is fixed to **Cloudflare Workers**. Everything else on this page is optional and generated only when selected. The lock-in trade-off is documented in [technology decisions](../../docs/technology-decisions.md#cloudflare-workers).
+The smallest viable deployment is **one host with Docker, running one Compose project**: PostgreSQL, a one-shot migration job, the app and Caddy. Every other service is added only by a selected feature (see the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds)). Why Docker replaced Cloudflare Workers is in [ADR-013](../../docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target).
 
-## Build and config
+## Build and images
 
-TanStack Start builds for Workers through `@cloudflare/vite-plugin` ([Cloudflare guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/)):
+TanStack Start's `vite build` produces a fetch handler (`dist/server/server.js`) and static assets (`dist/client`). [srvx](https://srvx.h3.dev/) serves both on Node.js. There is no platform plugin in `vite.config.ts`.
 
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import react from "@vitejs/plugin-react";
+One `Dockerfile`, several targets:
 
-export default defineConfig({
-  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), tanstackStart(), react()],
-});
+| Target | Contents | Used by |
+|--------|----------|---------|
+| `deps` | pnpm and all dependencies (pnpm store in a BuildKit cache mount) | `build` |
+| `prod-deps` | Production dependencies only | `runtime` |
+| `build` | Source and `dist/` | `migrate`, `runtime` |
+| `migrate` | `build` plus `CMD pnpm run db:migrate` | the `migrate` service |
+| `runtime` | `node:26-alpine`, production `node_modules`, `dist/`, non-root `node` user, `HEALTHCHECK` | the `app` service |
+
+## Compose services
+
+```yaml
+# compose.yaml: shape only; services marked † appear only for selected features
+postgres:   postgres:17-alpine, named volume, published on 127.0.0.1:5432 for local dev only
+migrate:    target migrate, runs once; app waits for service_completed_successfully
+app:        target runtime, :3000 on the Compose network only, health-checked, init: true
+caddy:      caddy:2-alpine on :80/:443, reverse_proxy app:3000, waits for app to be healthy
+scheduler†: alpine; POSTs to app:3000/api/internal/reconcile daily with CRON_SECRET (A9)
+worker†:    app image, consumes the job queue (queues)
+minio†:     S3-compatible storage for local development (storage: s3)
 ```
 
-```jsonc
-// wrangler.jsonc: only the selected sections are generated
-{
-  "name": "my-saas",
-  "main": "src/server.ts",                  // custom entry, see architecture.md
-  "compatibility_date": "<date of project creation>",
-  "compatibility_flags": ["nodejs_compat"], // Better Auth (AsyncLocalStorage), pg driver
-  "observability": { "enabled": true },
+- Values come from `.env` on the host (never baked into an image: `.dockerignore` excludes it). `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` are required, and Compose refuses to start without them.
+- `APP_URL` is the public URL. Caddy uses it as its site address: `http://localhost` serves plain HTTP, `https://app.example.com` gets a Let's Encrypt certificate automatically.
+- **Only Caddy is published.** Caddy ignores `X-Forwarded-For` from clients and sets it to the connecting IP, so Better Auth's rate limiter can trust it. Publishing `app` directly would let clients forge it.
 
-  "hyperdrive":      [{ "binding": "HYPERDRIVE", "id": "<id>" }],
-  "r2_buckets":      [{ "binding": "BUCKET", "bucket_name": "my-saas-uploads" }],
-  "queues": {
-    "producers": [{ "binding": "JOBS", "queue": "my-saas-jobs" }],
-    "consumers": [{ "queue": "my-saas-jobs", "dead_letter_queue": "my-saas-jobs-dlq" }]
-  },
-  "triggers":        { "crons": ["0 3 * * *"] },
-  "kv_namespaces":   [{ "binding": "KV", "id": "<id>" }]
-}
-```
+## Runtime model
 
-Run `wrangler types` to generate the `Env` type from this file. Keep the import path of the TanStack Start Vite plugin aligned with your installed version.
-
-## Bindings
-
-| Binding | Use for | Avoid for |
-|---------|---------|-----------|
-| **Hyperdrive** | Pooled, cached connections to PostgreSQL from Workers. Use the `pg` driver | — |
-| **D1** | Small, SQLite-shaped data, per-tenant databases, prototypes | Large or write-heavy relational workloads |
-| **R2** | User uploads, exports, generated files. Serve through signed or authorized routes | Data you need to query |
-| **Queues** | Emails, webhook follow-ups, exports, anything retryable | Work the user is waiting on |
-| **Cron Triggers** | Nightly billing reconciliation, cleanup, digests | Sub-minute scheduling |
-| **KV** | Read-heavy, eventually consistent caches and config | Counters, anything that needs strong consistency |
-| **Durable Objects** | Realtime rooms, per-tenant coordination, strongly consistent counters | General storage (only when justified) |
-| **Turnstile** | Bot protection on sign-up, sign-in and public forms. Verify the token on the server | — |
-
-## Workers runtime constraints
-
-- **No filesystem** for application data. Use R2, D1 or PostgreSQL.
-- **Node APIs only through `nodejs_compat`**, and only the subset Cloudflare supports ([Node.js compatibility](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)). Check every new dependency, and prefer libraries built on Web standards.
-- **Limits** on CPU time, memory and bundle size per request and plan. Check the current [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) for your plan, and move heavy work to Queues.
-- **No shared state between requests.** Isolates are reused unpredictably. Do not cache DB clients or per-user data in module scope.
-- **Bindings are request-scoped.** Read them from `env` (Hono `c.env`, or `import { env } from "cloudflare:workers"` in Start code).
+- One Node.js process per `app` container, with **one `pg` pool** (`DATABASE_POOL_MAX`, default 10) and **one Better Auth instance**, built on the first request (see [architecture](architecture.md#database-client-lifecycle)).
+- Size the pool so that `app replicas × DATABASE_POOL_MAX` stays below PostgreSQL's `max_connections` (100 by default).
+- The process holds no per-user state in memory: sessions and rate-limit counters live in PostgreSQL, so `docker compose up --scale app=N` works behind Caddy.
 
 ## Local development
 
-- Start everything with `bun run dev` (Vite with the Cloudflare plugin). It runs the Workers runtime locally with local emulation of D1, R2, KV, Queues and Durable Objects.
-- **PostgreSQL:** run it with Docker Compose. Hyperdrive connects directly in local mode through `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (preferred), or through `localConnectionString` in Wrangler config. Pooling and caching are off locally ([Hyperdrive local dev](https://developers.cloudflare.com/hyperdrive/configuration/local-development/)).
-- **Cron:** trigger it locally with `curl "http://localhost:<port>/cdn-cgi/local/scheduled?cron=0+3+*+*+*"`.
-- **Webhooks:** use `stripe listen --forward-to` for Stripe. For AbacatePay, use a tunnel (for example `cloudflared tunnel`) to a dev webhook.
+- `pnpm run db:up` starts only `postgres`. `pnpm run dev` runs Vite on :3000 and reads `.env`.
+- `docker compose up -d --build` runs the production stack locally at `http://localhost`.
+- Webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`. For AbacatePay, use dev mode plus a tunnel.
 
 ## Secrets
 
-- Local: `.dev.vars` (gitignored). Commit `.dev.vars.example` with names only.
-- Production: `wrangler secret put <NAME>`. Secrets are bindings on `env`, like any other.
-- CI: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub environment secrets.
-- The full list of variables per feature is in the [configuration model](../../docs/configuration-model.md#features).
+- `.env` (gitignored), with `.env.example` committed. `create-b7` generates `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`.
+- Production: `.env` on the host with mode `600`, or the secret store of the platform running the containers. CI: GitHub secrets.
+- The variables for each feature are listed in the [configuration model](../../docs/configuration-model.md#fullstack-features-what-each-one-adds).
 
-## Email
+## Optional services
 
-`src/modules/email/send.ts` exports `sendEmail({ to, subject, html, text })`, the only place that calls the provider. With Resend, it uses `RESEND_API_KEY` and `EMAIL_FROM` from a verified domain, and checks both `data` and `error` in the response. Resend documents Workers support ([Resend on Workers](https://resend.com/docs/send-with-cloudflare-workers)). To change provider, replace this one file.
+| Feature | Rule |
+|---------|------|
+| **Email (Resend)** | `modules/email/send.ts` is the only caller of the provider. It uses `html`/`text`, and it checks both `data` and `error`. When queues are enabled, send from the worker |
+| **Storage (S3)** | Uploads go through an authorized route with size and type checks, or through short-lived presigned URLs. Keys use `org/<organizationId>/…` |
+| **Queues** | Small JSON messages carrying IDs. Consumers re-read state and are idempotent, with bounded retries and a dead-letter path |
+| **Turnstile** | Verify the token on the server for sign-up, password reset and public forms |
 
-Send email from a Queue consumer when queues are enabled, so provider outages do not fail user requests.
-
-## R2 storage
-
-- Uploads go through an authorized API route (size and type checked), or through presigned URLs when uploads are large.
-- Object keys are tenant-prefixed: `org/<organizationId>/...`. The authorization check runs before every read.
-
-## Queues and cron
-
-- Messages are small JSON with a `type` and IDs. Load the current state from the database inside the consumer.
-- Consumers are idempotent, just like webhooks. Configure `max_retries` and a dead-letter queue.
-- `queue` and `scheduled` handlers are exported from the same `src/server.ts` as `fetch`. See [architecture](architecture.md#server-entry).
-
-## Deployment
+## Deployment workflow
 
 ```
-GitHub Actions
-  on PR:   bun install → typecheck → lint → vitest → build
-  on main: same → drizzle-kit migrate (DATABASE_URL secret) → wrangler deploy → Playwright smoke test against the deployed URL
+PR/main: pnpm install → typecheck → lint → migrate → vitest → build → Playwright (dev server)
+         docker compose up --build --wait → Playwright against Caddy (http://localhost)
+deploy:  on the host: git pull → docker compose up -d --build   (migrate runs before the new app starts)
 ```
 
-- Run migrations **before** deploy, and keep them backward-compatible (expand, then contract), because the old and new Worker versions briefly serve traffic at the same time.
-- Use Wrangler environments (`--env staging`) for a staging Worker with its own bindings and secrets.
-- Roll back with `wrangler rollback` for code. Database rollbacks are forward fixes.
+- Migrations are expand-then-contract, because the old `app` container keeps serving while `migrate` runs.
+- Back up the `pgdata` volume (`docker compose exec postgres pg_dump -U postgres b7`) before deploys that migrate.
+- Roll back by checking out the previous commit and running `docker compose up -d --build`. Database changes are fixed forward.
+- Pushing images to a registry (to avoid building on the host) is optional and left to the chosen platform.

@@ -1,0 +1,59 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: b7 }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres -d b7" --health-interval 2s --health-retries 15
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/b7
+      BETTER_AUTH_URL: http://localhost:3000
+      # #if email
+      EMAIL_FROM: B7 <onboarding@resend.dev>
+      # #endif
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with: { node-version: 26, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run lint
+      - run: pnpm run db:migrate
+      - run: pnpm run test
+      - run: pnpm run build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: BETTER_AUTH_SECRET=$(openssl rand -base64 32) pnpm run test:e2e
+
+  # Builds the images and runs the whole stack (postgres → migrate → app → caddy) as production would.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 26, cache: pnpm }
+      # The E2E tests read the database and sign verification links, so they share these values with the stack.
+      - run: |
+          PASSWORD=$(openssl rand -hex 16)
+          echo "POSTGRES_PASSWORD=$PASSWORD" >> .env
+          echo "DATABASE_URL=postgres://postgres:$PASSWORD@localhost:5432/b7" >> .env
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+          # #if billing
+          echo "CRON_SECRET=$(openssl rand -base64 32)" >> .env
+          # #endif
+      - run: docker compose up -d --build --wait
+      - run: pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium
+      # Auth rate limits are real through Caddy (3 sign-ups per 10 s per client IP), so only the flows that
+      # check the production stack run here; the full suite runs against the dev server in the check job.
+      - run: BASE_URL=http://localhost pnpm exec playwright test smoke notes navigation billing
+      - if: failure()
+        run: docker compose logs

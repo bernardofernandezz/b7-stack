@@ -17,12 +17,12 @@ Starting a project means making dozens of decisions before you write any product
 - **Not a framework.** B7 adds no runtime layer between you and React, Hono, Go or PyTorch. Generated code uses those libraries directly.
 - **Not a dependency bundle.** Nothing is installed unless the configuration selects it.
 - **Not a microservices starter.** The defaults are a single deployable unit per product and a modular monolith inside it.
-- **Not vendor-neutral at any cost.** Some defaults, such as Cloudflare Workers for B7 Fullstack, create lock-in. We accept that where it pays off and document the cost in [technology decisions](technology-decisions.md).
+- **Not vendor-neutral at any cost.** Some defaults, such as Better Auth's database schema or TanStack Start's routing for B7 Fullstack, create lock-in. We accept that where it pays off and document the cost in [technology decisions](technology-decisions.md).
 
 ## Relationship to T3 Stack
 
 T3 showed that a small, opinionated, type-safe stack with a generator beats a blank page. B7 keeps that idea and changes three things:
 
 1. **More than one profile.** It covers APIs in Go, systems tooling and ML in Python, not only TypeScript web apps.
-2. **Different core technologies.** It uses TanStack Start, Hono, oRPC and Cloudflare Workers.
+2. **Different core technologies.** It uses TanStack Start, oRPC, Hono (for standalone APIs), and Docker Compose as the Fullstack deployment unit.
 3. **SaaS building blocks.** It documents organizations, billing, webhooks and background jobs as optional modules.

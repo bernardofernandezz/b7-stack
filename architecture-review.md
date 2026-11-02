@@ -1,428 +1,240 @@
-# B7 Stack v0.1 — Architecture Review
+# B7 Stack: Architecture Review (v0.2 refinement)
 
-**Review date:** 2026-10-31  
-**Repository reviewed:** [bernardofernandezz/b7-stack](https://github.com/bernardofernandezz/b7-stack), default branch `main`  
-**Scope:** documentation-only review of B7 Fullstack and the configuration model. No application code was executed.  
-**Decision policy:** this document does not silently change B7's architecture. Recommendations marked **[DECISION]** require maintainer approval.
+**Date:** 2026-10-31 (all sources accessed on this date)
+**Supersedes:** the v0.1 review (in git history: commit `9816a4d`, refined in `bfc9355`).
+**Scope:** narrow B7 Fullstack to the smallest production-feasible architecture, re-verify every critical claim, and define what blocks the first reference implementation.
+**Nothing here is executable evidence.** Items marked VERIFIED are confirmed by vendor documentation only. **No part of B7 is production-ready until the acceptance tests below pass against a deployed Worker.**
 
-## Classification
+## Target change: Docker Compose replaces Cloudflare Workers (2026-11-01)
 
-- **Verified** — directly supported by current official documentation.
-- **Requires executable validation** — documented building blocks exist, but the exact B7 integration/runtime behavior has not been proven by running it.
-- **Incorrect** — the current B7 documentation or proposed behavior conflicts with official documentation or has a correctness flaw.
-- **Unsupported** — a required capability or provider contract is not documented sufficiently to implement safely.
-- **Uncertain** — official documentation is incomplete, ambiguous, or contradictory.
+At the maintainer's request, B7 Fullstack now runs as a Node.js process in Docker Compose behind Caddy ([ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)). Everything below that is about Workers, Hyperdrive or Wrangler is kept as history. Its effect on this review:
 
-## Executive summary
+| Item | Status after the change |
+|------|-------------------------|
+| A4 (cache-disabled Hyperdrive), H-a, D-T1, BA-T1, S2 | **Obsolete.** There is no Hyperdrive and no per-request client or auth instance: one pool and one Better Auth instance per process |
+| A9, T-T2, S1 | **Replaced.** Reconciliation runs in a `scheduler` Compose service, so no custom Worker entry exists |
+| A12, W-1 | **Obsolete.** No Workers CPU limit. Password hashing runs in Node.js |
+| W-2 | **Replaced** by C-T1 |
+| S4, S-T1 | **Simplified.** Stripe's Node SDK verifies signatures natively. S-T1 still runs |
+| BA-T2, D-T2 | **Passed** in Compose on 2 replicas (2026-11-01): see the template's Verification status |
+| H-b | Exercised by B-T4 locally (50 concurrent webhooks); still to confirm against real Stripe latency |
 
-B7 Fullstack is **architecturally plausible**, but v0.1 is not yet a production-ready implementation specification. The core choices are mostly defensible: TanStack Start on Workers, Hono + oRPC, Better Auth, PostgreSQL + Drizzle + Hyperdrive using `pg`, and a modular monolith.
+New tests:
 
-The most important corrections before implementation are:
+| ID | Test | Pass condition | Status (2026-11-01) |
+|----|------|----------------|---------------------|
+| C-T1 | `docker compose up --build --wait`, then Playwright smoke and notes E2E through Caddy | All services healthy, E2E green | **Passed** locally, for the template and for a project generated from the packed CLI |
+| C-T2 | Sign-in attempts through Caddy, each with a different forged `X-Forwarded-For` | Rate limit still applies (429 after the limit) | **Passed** locally (401 401 401 429 429) |
+| C-T3 | `APP_URL=https://<domain>` on a public host | Caddy obtains a certificate, smoke test green over HTTPS, cookies are `Secure` | Not run: needs a host and a domain |
 
-1. **Hyperdrive caching must be disabled for auth, permissions, memberships, billing and read-after-write paths.** Writes do not invalidate cached reads.
-2. **The AbacatePay HMAC example does not authenticate the sender.** Its HMAC key is published in the docs; the query-string secret is the actual authentication factor. Since the key is public, the HMAC also cannot protect against a malicious party who can recompute it.
-3. **Billing event timestamps are not a safe ordering mechanism.** Stripe explicitly says not to use event `created` to order events.
-4. **The current webhook deduplication flow has a concurrency race and no durable side-effect delivery guarantee.** A transactional inbox/outbox design is needed.
-5. **AbacatePay's documented webhook contract is incomplete for a provider-independent subscription state machine.** The public event overview does not document a timestamp, a failed-renewal event, or enough subscription state fields to safely derive all transitions.
-6. **The custom Start + Hono Worker composition is a B7 convention, not a documented framework integration.** It needs a deployed Worker proof.
-7. **Better Auth's default scrypt password hashing makes the Workers Free-plan CPU limit a real risk.** Benchmark it; do not weaken password hashing just to fit a plan limit.
+## Evidence labels
 
-### Findings at a glance
+| Label | Meaning |
+|-------|---------|
+| **VERIFIED (docs)** | Current official documentation states it directly |
+| **UNVERIFIED** | Built only from documented pieces, or the docs are silent. A named test decides it |
+| **INCORRECT (v0.1)** | B7 v0.1 contradicted official documentation |
+| **UNSUPPORTED** | The vendor does not provide the capability |
 
-| ID | Area | Classification | Release blocker |
-|---|---|---|---|
-| T-1 | TanStack Start + Hono in one Worker | Requires executable validation | Yes |
-| T-2 | Start request context and default entry wrapping | Incorrect (one claim in previous review) / Requires validation | Yes if custom context is needed |
-| BA-1 | Better Auth + Workers compatibility | Verified | No |
-| BA-2 | Better Auth instance-per-request and shared DB lifecycle | Requires executable validation | Yes |
-| BA-3 | Better Auth rate-limit storage and Cloudflare IP header | Verified | No |
-| BA-4 | `tanstackStartCookies` requirement | Conditional; not a current blocker | No |
-| BA-5 | Default password hashing vs Workers Free CPU | Requires executable validation | Yes |
-| H-1 | Hyperdrive cached reads for security-sensitive data | Incorrect | Yes |
-| D-1 | Drizzle + Hyperdrive driver | Verified | No |
-| D-2 | Connection/client lifecycle under Start streaming | Requires executable validation | Yes |
-| A-1 | AbacatePay HMAC/query-secret security model | Incorrect (security claim) | Yes |
-| A-2 | AbacatePay `devMode` handling | Requires explicit environment guard | Yes |
-| A-3 | AbacatePay subscription event contract | Unsupported / Uncertain | Yes for AbacatePay billing |
-| S-1 | Stripe webhook verification on Workers | Requires executable validation | Yes |
-| S-2 | Stripe snapshot vs thin event format | Uncertain / decision required | No for first proof; yes before claiming support |
-| B-1 | Event-time ordering | Incorrect | Yes |
-| B-2 | Deduplication race and side-effect delivery | Incorrect | Yes |
-| B-3 | Stripe status mapping | Incorrect (incomplete) | Yes |
-| M-1 | Active organization and membership validation | Requires explicit authorization checks | Yes |
-| C-1…C-8 | Configuration model | Incorrect / simplification | C-3 and C-4 |
+Version notes: no vendor page reviewed states a library version except where noted (`pg` ≥ 8.16.3, Better Auth 1.5 release post dated 2026-02-28, Stripe Subscription API object as currently published, AbacatePay API v2, `@base-ui/react` 1.9.0 on npm). The reference implementation must record the exact versions it pins.
 
 ---
 
-## 1. TanStack Start + Hono on Cloudflare Workers
+## Contradictions found in v0.1
 
-### T-1. Single Worker with path dispatch — Requires executable validation (blocker)
-
-**B7 design:** `src/server.ts` dispatches `/api/*` to Hono and sends all other requests to the TanStack Start handler. The same Worker exports `queue` and `scheduled`.
-
-**Verified building blocks**
-- Cloudflare documents TanStack Start on Workers and a custom `src/server.ts` entrypoint that exports the Start handler together with Queue and Cron handlers: [Cloudflare — TanStack Start](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/).
-- TanStack Start documents a custom server entry and the `handler.fetch(request, opts)` interface: [TanStack Start — Server Entry Point](https://tanstack.com/start/latest/docs/framework/react/guide/server-entry-point).
-- Hono supports the Workers Fetch handler shape and receives bindings through its environment argument: [Hono — Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers).
-- oRPC documents mounting its Fetch API handler as Hono middleware: [oRPC — Hono Adapter](https://orpc.dev/docs/adapters/hono).
-
-**What is not verified:** neither Cloudflare, TanStack Start nor Hono documents this exact combination as a supported integration. B7's dispatcher is a composition of documented parts.
-
-**Important correction to the earlier review:** the B7 code calls `handler.fetch(request)` from its own Worker dispatcher. It does **not** explicitly pass the Worker's `env` as TanStack's `opts`. The earlier claim that this exact B7 call necessarily passes `env` as Start request options was inaccurate. Cloudflare's own example assigns `fetch: handler.fetch` directly to the Worker export, but that is not identical to B7's path dispatcher.
-
-**Impact:** this is the Fullstack profile's central integration. It must be proven for SSR, Start server functions, error conversion, cookies, Hono API routes, Queue and Cron exports. A type-check alone is not enough.
-
-**Recommendation:** keep the architecture provisionally, but make the first reference implementation prove it in a deployed Worker. Do not claim the composition is officially supported until that test passes.
-
-**Required test T-T1**
-- One deployed Worker serves an SSR route, a Start server function, `/api/auth/*`, `/api/rpc/*`, `/api/v1/*` and a webhook route.
-- Start server errors retain Start's expected error handling.
-- Queue and Cron handlers are exported and execute without changing HTTP routing.
-- Test the exact pinned TanStack Start, Vite plugin, Wrangler and Hono versions.
-
-### T-2. Start request context and error wrapper — Requires executable validation
-
-TanStack's current server-entry guide says the default export from `@tanstack/react-start/server-entry` is already wrapped for request context and uncaught error conversion. It also documents `createServerEntry({ fetch })` for custom handlers, and says additional typed request data must be passed through the second `opts` argument's `context` property.
-
-B7's current architecture calls `handler.fetch(request)` without passing an explicit Start context. That is acceptable only if Start code obtains bindings through the documented Workers environment import and does not depend on a custom Start request context.
-
-**Recommendation**
-- Keep the same `Request` object when dispatching to Start; do not clone or rewrite it unless the new request is wrapped in its own Start entry.
-- If B7 needs a per-request database handle or authenticated context inside Start middleware/server functions, define and pass a typed Start request context. Do not assume that Worker `env` is interchangeable with Start's `opts`.
-- Verify error conversion and cookie helper behavior with the pinned Start version.
-
-**Fallback [DECISION]:** a Start splat route that forwards API requests to Hono is a possible alternative, but it changes middleware and routing ownership. Do not adopt it without comparing the deployed behavior and complexity against the current dispatcher.
+| # | Contradiction | Resolution in v0.2 |
+|---|---------------|--------------------|
+| X-1 | README and Fullstack docs made Hono core, while every vendor integration B7 uses (Better Auth, oRPC) is documented against Start server routes, not Hono-in-Start | Hono removed from Fullstack [A1] |
+| X-2 | `architecture.md` promoted Hyperdrive caching ("default on") for scaling, while Cloudflare says writes do not invalidate it and recommends disabling it for auth and billing | Caching disabled on the only binding [A4] |
+| X-3 | `billing.md` said AbacatePay trials were undocumented, but AbacatePay documents `trialDays`, `trialEndsAt` and `subscription.trial_started` | Corrected in [billing](stacks/fullstack/billing.md#abacatepay-experimental) |
+| X-4 | `billing.md` ordered events by time (`last_event_at`), while Stripe says not to use `created` for ordering and AbacatePay payloads carry no timestamp | Replaced with state sync [A8] |
+| X-5 | Principles say "no mandatory paid services", but email + password on the Workers Free plan (10 ms CPU) is unmeasured | Marked UNVERIFIED, blocker [A12] |
+| X-6 | The configuration model allowed SQLite (via `bun:sqlite`) on the Workers target | Removed: SQLite (TS) and D1 deferred |
+| X-7 | The configuration model made "organizations without email" a warning, while Better Auth invitations need `sendInvitationEmail` | Hard rule |
+| X-8 | `security.md` referenced Hono's `csrf()` for Fullstack | Replaced by Start `createCsrfMiddleware` |
+| X-9 | `cli/README.md` held a roadmap that duplicated scope decisions | Moved to [ROADMAP.md](ROADMAP.md) |
+| X-10 | `backendStrategy = start-server` documented no auth mount at all | The strategy dimension is removed, and auth is always mounted at a Start server route |
 
 ---
 
-## 2. Better Auth on Workers and PostgreSQL / Hyperdrive
+## Decision matrix
 
-### BA-1. Runtime compatibility — Verified
+Confidence is **High** (vendor docs state it), **Medium** (each piece is documented but the combination is not), or **Low** (depends on undocumented behavior).
 
-Better Auth's Hono integration says it uses `AsyncLocalStorage` and requires `nodejs_compat` (or the narrower `nodejs_als` when only ALS is needed): [Better Auth — Hono Integration](https://better-auth.com/docs/integrations/hono). Cloudflare's Hyperdrive `pg` guidance also requires Node.js compatibility for the driver: [Cloudflare — PostgreSQL drivers](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/).
-
-**Recommendation:** explicitly document the compatibility date and flags used by the template. Even where a newer Workers compatibility date enables Node compatibility by default, an explicit and tested runtime contract is easier to reason about.
-
-Cloudflare also warns that the Workers Vitest plugin automatically injects `nodejs_compat`, so tests may pass when the deployed Wrangler config is missing it: [Workers Best Practices — Vitest](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/).
-
-### BA-2. Per-request Better Auth factory and shared database client — Requires executable validation (blocker)
-
-B7 proposes `getAuth(env)` and says the factory creates the Drizzle client and Better Auth instance per request. The official Better Auth docs show instance configuration and integration patterns, but do not prescribe this Workers-specific lifecycle.
-
-B7 also uses Better Auth from Hono and Start code. If each path independently creates a `pg.Client` / Drizzle instance / Better Auth instance, the same request can create duplicate database connections and duplicate plugin initialization.
-
-**Recommendation**
-- Establish one request-scoped dependency container for each HTTP request.
-- Reuse the same Drizzle database handle for application services and Better Auth wherever the adapter contract permits it.
-- Do not store a request-bound client or environment binding in module scope.
-- Test the actual Better Auth adapter and factory behavior under concurrency and after request completion.
-
-### BA-3. Rate limiting — Verified, with configuration requirements
-
-Better Auth documents that in-memory rate-limit storage may be unsuitable for serverless environments, supports database or secondary storage, and allows configuring the client IP header. Cloudflare's trusted header is `cf-connecting-ip`: [Better Auth — Rate Limit](https://better-auth.com/docs/concepts/rate-limit).
-
-**Recommendation:** for the PostgreSQL profile, use database-backed rate limiting through a cache-disabled Hyperdrive path. Do not use eventually consistent KV for security counters unless a deliberately non-atomic policy is acceptable. Add an integration test that proves rate limits are shared across separate Worker isolates.
-
-### BA-4. `tanstackStartCookies` — Conditional, not a blanket blocker
-
-Better Auth's TanStack Start integration requires the `tanstackStartCookies` plugin when server-side calls such as `signInEmail` or `signUpEmail` need to set cookies through Start: [Better Auth — TanStack Start](https://better-auth.com/docs/integrations/tanstack).
-
-B7's documented primary flow mounts Better Auth under Hono and has browser auth calls use the Better Auth client. Its Start server functions read the session; they are not documented as calling server-side sign-in/sign-up operations.
-
-**Correction:** the previous review overstated this as an unconditional omission. Add the plugin only if B7 supports server functions that perform Better Auth operations which write cookies. If that flow is added, test Set-Cookie propagation through Start.
-
-### BA-5. Password hashing and Workers Free CPU — Requires executable validation (blocker)
-
-Better Auth's security docs state that its default password hashing algorithm is **scrypt**, which is memory-hard and CPU-intensive: [Better Auth — Security](https://better-auth.com/docs/reference/security). Cloudflare currently documents a 10 ms CPU limit per HTTP request on the Workers Free plan, compared with a much higher configurable limit on Paid: [Cloudflare — Workers Limits](https://developers.cloudflare.com/workers/platform/limits/).
-
-**Impact:** email/password sign-up and sign-in may exceed the Free-plan CPU budget. The documentation alone does not establish the exact runtime cost of Better Auth's implementation under workerd.
-
-**Recommendation**
-- Benchmark password hashing and verification in a deployed Worker on the Free plan.
-- Include realistic cold and warm requests, not only a microbenchmark of the hash function.
-- If the limit is exceeded, document the plan requirement or make the authentication method a deliberate product choice. Do not silently reduce scrypt cost or replace it with a weaker scheme to satisfy a free-tier constraint.
+| ID | Decision | Alternatives considered | Evidence | Trade-offs | Recommendation | Confidence | Required validation |
+|----|----------|------------------------|----------|-----------|----------------|-----------|--------------------|
+| A1 | **HTTP routing: TanStack Start server routes only. No Hono in Fullstack** | (a) Start + Hono dispatcher in `src/server.ts`; (b) Hono inside a Start splat route; (c) Start only | Better Auth: Start mount at `src/routes/api/auth/$.ts` ([installation](https://www.better-auth.com/docs/installation)). oRPC: Start mount at `src/routes/api/rpc.$.ts` ([adapter](https://orpc.dev/docs/adapters/tanstack-start)). Start: server routes, global request middleware, CSRF middleware ([middleware](https://tanstack.com/start/latest/docs/framework/react/guide/middleware)). **No vendor documents Start + Hono in one Worker**, and the community examples found are unofficial | Lose Hono middleware. Depend on Start's younger server-route API | (c) | Medium–High | T-T1, T-T3, T-T4 |
+| A2 | **oRPC is the only app transport. No server functions for business logic** | Server functions only; both | oRPC isomorphic client and in-process `createRouterClient` for SSR ([adapter](https://orpc.dev/docs/adapters/tanstack-start)) | One more dependency. Loaders call procedures | oRPC only | Medium | T-T1, T-T5 |
+| A3 | **PostgreSQL only in Fullstack. D1 deferred** | Keep D1 as an alternative | Better Auth on D1 uses `batch()` rather than interactive transactions ([Better Auth 1.5](https://better-auth.com/blog/1-5)). Billing's design needs row locks | Excludes SQLite-only deployments | PostgreSQL only | High | — |
+| A4 | **One Hyperdrive binding with caching disabled. A cached binding is deferred** | Cache on (default); two bindings | "Hyperdrive does not purge or invalidate cached read query results when your application writes", and use a cache-disabled config for "authentication, permissions, billing" ([query caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)) | No query caching | One uncached binding | High | H-T1, H-T2 |
+| A5 | **Better Auth is core in Fullstack** | Optional auth | A SaaS profile without users has no tenancy or billing customer | Removes a "no auth" Fullstack variant (use Web) | Core | High | — |
+| A6 | **Cookie cache disabled by default** | Enabled with a short `maxAge` | When enabled, the session is validated from the cookie until it expires ([session management](https://www.better-auth.com/docs/concepts/session-management)) | One DB read per authenticated request | Disabled. Opt-in with ≤ 5 min | High | H-T1 |
+| A7 | **Stripe is the reference. AbacatePay is EXPERIMENTAL** | Equal support | AbacatePay: no `past_due`, no period end, card-only subscriptions, undocumented payload fields, HMAC keyed with a published key ([subscriptions](https://docs.abacatepay.com/pages/subscriptions/reference), [security](https://docs.abacatepay.com/pages/webhooks/security)) | Brazilian users get weaker billing guarantees | As stated | High | A-T1…A-T3 |
+| A8 | **Billing state sync**: webhook → inbox insert + row lock + provider fetch, in one transaction. Entitlements derived. Outbox deferred | Event-sourced state from payloads; queue-mode processing; outbox now | Stripe: no ordering guarantee, do not use `created` ([webhooks](https://docs.stripe.com/webhooks)). AbacatePay has `GET /v2/subscriptions/get` ([get](https://docs.abacatepay.com/pages/subscriptions/get)) | A transaction is held across an outbound HTTP call. One API call per event | As stated | Medium | B-T1…B-T5 |
+| A9 | **Cron is derived from billing** (daily reconciliation) | Optional cron | AbacatePay has no period field and undocumented payloads, so reconciliation is the safety net | Billing always needs the custom `src/server.ts` | Derived | High | T-T2, B-T5 |
+| A10 | **KV and Durable Objects deferred. Passkeys experimental. Teams and dynamic roles deferred** | Keep them as options | No core feature needs them | Fewer options | Defer | High | — |
+| A11 | **Configuration model reduced to profile + profile-specific options**. Auth deferred in Web and API. SQLite (TS) deferred | Keep the 18 dimensions | v0.1 had redundant dimensions (`runtime`, `backendFramework`, `backendStrategy`) and two invalid combinations (X-6, X-10) | Less flexibility in v0.2 | Reduce | High | — |
+| A12 | **Plan requirement for email + password** | Assume the Free plan works | Free plan: 10 ms CPU per request ([limits](https://developers.cloudflare.com/workers/platform/limits/)). Hashing cost is undocumented | — | Measure first, then choose: document the Paid plan, default to OAuth, or tune hashing (never silently) | Low | W-1 |
 
 ---
 
-## 3. Drizzle + Hyperdrive
+## Facts, assumptions and hypotheses
 
-### D-1. Driver choice — Verified
+### Confirmed facts (vendor docs)
 
-Cloudflare's Drizzle + Hyperdrive example explicitly recommends node-postgres (`pg`) and says the Drizzle + Postgres.js pairing over Hyperdrive is not currently supported: [Cloudflare — Drizzle ORM + Hyperdrive](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/).
+- **TanStack Start**
+  - Builds for Workers with `@cloudflare/vite-plugin` (`viteEnvironment: { name: "ssr" }`).
+  - Its default Wrangler `main` is `@tanstack/react-start/server-entry`.
+  - A custom `src/server.ts` may export `fetch: handler.fetch` plus `scheduled` and `queue` ([Cloudflare guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/tanstack-start/), [Start hosting](https://tanstack.com/start/latest/docs/framework/react/guide/hosting)).
+- **Start middleware.** Global request middleware runs for SSR, server routes and server functions. Defining `src/start.ts` removes Start's automatic CSRF middleware for server functions. `createCsrfMiddleware()` can also be attached to any route ([middleware](https://tanstack.com/start/latest/docs/framework/react/guide/middleware)).
+- **oRPC.** Mounts in a Start server route with an `ANY` handler. Its server-side client is shared across requests, so per-request data must come through a function context ([adapter](https://orpc.dev/docs/adapters/tanstack-start)).
+- **Better Auth.**
+  - Mounts in Start at `/api/auth/$`, and needs `tanstackStartCookies` for server-side cookie setting.
+  - Needs `AsyncLocalStorage` (`nodejs_compat`) ([installation](https://www.better-auth.com/docs/installation)).
+  - Rate-limit memory storage is unsuitable for serverless. `storage: "database"` and `ipAddressHeaders` are supported ([rate limit](https://www.better-auth.com/docs/concepts/rate-limit)).
+  - `activeOrganizationId` is `null` on new sessions, and `createAccessControl` is imported from `better-auth/plugins/access` ([organization](https://www.better-auth.com/docs/plugins/organization)).
+- **Hyperdrive.**
+  - Drizzle + Postgres.js is unsupported, and `pg` ≥ 8.16.3 is required ([Drizzle](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/), [node-postgres](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/)).
+  - Caching defaults to 60 s plus 15 s stale-while-revalidate and is not invalidated by writes ([caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/)).
+  - Pooling is in transaction mode, and `SET` only persists within a transaction ([how it works](https://developers.cloudflare.com/hyperdrive/concepts/how-hyperdrive-works/)).
+  - It is available on the Free plan with 100k queries/day ([pricing](https://developers.cloudflare.com/hyperdrive/platform/pricing/)).
+- **Workers.**
+  - 10 ms CPU on Free. 6 simultaneous connections waiting for headers. 15 min for cron and queue consumers ([limits](https://developers.cloudflare.com/workers/platform/limits/)).
+  - The Vitest pool injects `nodejs_compat` ([best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)).
+- **Stripe.**
+  - Subscription statuses: `incomplete`, `incomplete_expired`, `trialing`, `active`, `past_due`, `canceled`, `unpaid`, `paused`. `incomplete_expired` is terminal ([Subscription object](https://docs.stripe.com/api/subscriptions/object)).
+  - No ordering guarantee, and `created` must not be used for ordering. Retries last up to 3 days. The default signature tolerance is 5 min, and 0 disables it ([webhooks](https://docs.stripe.com/webhooks)).
+- **AbacatePay.**
+  - Subscription statuses are `PENDING`, `ACTIVE` and `CANCELLED`. Failed retries end in automatic cancellation. Trials are supported. There is no period field, and subscriptions support `CARD` only ([reference](https://docs.abacatepay.com/pages/subscriptions/reference), [create](https://docs.abacatepay.com/pages/subscriptions/create), [get](https://docs.abacatepay.com/pages/subscriptions/get)).
+  - Webhook envelope `{ id, event, apiVersion, devMode, data }`, with no timestamp ([webhooks](https://docs.abacatepay.com/pages/webhooks)).
+  - Signature: HMAC-SHA256 keyed with a key published in the docs, plus a `webhookSecret` query parameter. Retried 7 times over about 18 hours, and `410` disables the webhook ([security](https://docs.abacatepay.com/pages/webhooks/security)).
+- **Queues** are available on the Free plan with 10k operations/day ([pricing](https://developers.cloudflare.com/queues/platform/pricing/)).
 
-The current PostgreSQL driver page lists a minimum supported `pg` version and compatibility requirements: [Cloudflare — Connect to PostgreSQL](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/).
+### Assumptions (B7 relies on them, the docs don't state them)
 
-**Recommendation:** keep `drizzle-orm/node-postgres` + `pg`; pin a supported `pg` version rather than documenting only the driver name. Run migrations with a direct database URL in CI, not through the Worker's Hyperdrive binding.
+- **S1.** Calling `handler.fetch` from a custom `src/server.ts` that also exports `scheduled` behaves exactly like the built-in entry. Cloudflare shows the shape. B7 assumes there are no side effects.
+- **S2.** A Better Auth instance created per request has acceptable CPU cost. The 1.5 example constructs it inside `fetch` but doesn't discuss cost.
+- **S3.** Start's `ANY` server-route handler key works. oRPC's docs use it, and Start's server-routes page does not list it. The fallback is to list each method explicitly.
+- **S4.** Stripe's `constructEventAsync` and `createSubtleCryptoProvider` exist and work on the current SDK in workerd. The only official source is the 2021 Cloudflare post.
+- **S5.** `subscription_data.metadata` and `customer` are the right Stripe Checkout Session parameters for linking a session to a customer. **Checked 2026-11-01** against the `stripe` SDK 23.1.0 types (API `2026-10-28`), and exercised by test S-T3 with Stripe faked.
 
-### H-1. Hyperdrive cached reads for auth and authorization — Incorrect (blocker)
+### Implementation hypotheses (B7 design choices to validate)
 
-Cloudflare documents that query caching is enabled by default for eligible read queries, with default `max_age = 60s` and `stale_while_revalidate = 15s`. Crucially, **writes do not invalidate cached read results**. Cloudflare explicitly recommends a cache-disabled Hyperdrive configuration for reads that must be fresh, including authentication, sessions, permissions, billing and read-after-write: [Cloudflare — Query Caching](https://developers.cloudflare.com/hyperdrive/concepts/query-caching/).
-
-B7 currently describes Hyperdrive caching as a scaling optimization without defining a separate consistency boundary.
-
-**Impact:** stale reads can preserve access after session revocation, membership removal or role changes, and can expose stale entitlements after billing changes. The exact stale window depends on cache settings and revalidation behavior; it must not be treated as immediate consistency.
-
-**Recommendation [DECISION]:**
-- Safest v0.x default: create one Hyperdrive configuration with caching disabled and use it for all application/auth/billing database operations.
-- Add a cache-enabled binding later only for explicitly selected, non-security-sensitive reads where bounded staleness is acceptable.
-- If both bindings are generated, the default database/auth client must use the cache-disabled binding. Do not let the ORM or auth library choose a cached binding implicitly.
-
-This is a production correctness issue, not merely a performance preference.
-
-### D-2. Connection lifecycle and streaming — Requires executable validation (blocker)
-
-Cloudflare's examples create the `pg.Client` inside the request handler. B7's architecture says clients are per-request but does not define cleanup or how the lifecycle interacts with streamed Start responses.
-
-**Recommendation**
-- Define a single owner for the client and a deterministic cleanup strategy.
-- Do not blindly call `client.end()` immediately after Start returns a streaming `Response` if the stream can still perform database work.
-- Test successful responses, thrown errors, aborted client connections, streamed SSR and sustained concurrency against a deployed Worker.
-- Measure origin connections and verify no leaked clients.
-
-The earlier review's suggestion to always call `client.end()` via `ctx.waitUntil()` should not be adopted without this test; the correct lifecycle depends on whether the response body still uses the database.
-
----
-
-## 4. AbacatePay webhook verification
-
-### A-1. HMAC key and query secret — Incorrect security claim (blocker)
-
-The current AbacatePay security page states that:
-- the `webhookSecret` query parameter is the value the receiver must validate;
-- the HMAC-SHA256 signature is calculated over the raw body using AbacatePay's **public key**;
-- the page's code example includes that key as a literal constant.
-
-Sources: [AbacatePay — Webhook Security](https://docs.abacatepay.com/pages/webhooks/security) and [AbacatePay — Webhooks](https://docs.abacatepay.com/pages/webhooks).
-
-**Security analysis:** a MAC whose key is publicly known cannot authenticate the sender against an attacker. Anyone who knows the public key can compute a matching HMAC for a modified payload. Therefore, the HMAC is not an adversarial integrity guarantee either. The query-string secret is the only documented authentication factor.
-
-**Impact:** if the query secret leaks through request logs, proxy logs, observability traces, error reports or copied URLs, an attacker can construct a request with a valid HMAC and forge billing events. The documentation describes no signed timestamp or replay window.
-
-**Recommendation**
-1. Update B7's wording: the URL secret authenticates the webhook request; the published-key HMAC does not provide sender authentication and should not be treated as a second independent security boundary.
-2. Use a high-entropy, per-endpoint secret. Keep it out of logs, traces, analytics, error breadcrumbs and support diagnostics. Redact the `webhookSecret` query parameter at the earliest logging layer.
-3. Do not assume event-ID deduplication prevents a first-time forged event.
-4. **[DECISION]** Before granting paid entitlements, retrieve the authoritative checkout/subscription/payment object from AbacatePay using the server API key, if the current API exposes the necessary read operation and stable identifiers. Confirm the exact v2 endpoint and response fields before adopting this design. If authoritative re-fetch is unavailable, document the residual trust limitation and do not claim strong webhook authenticity.
-
-### A-2. `devMode` and environment separation — Requires explicit guard (blocker)
-
-AbacatePay's documented v2 envelope contains `id`, `event`, `apiVersion`, `devMode` and `data`: [AbacatePay — Webhooks](https://docs.abacatepay.com/pages/webhooks).
-
-**Recommendation**
-- Use separate secrets and webhook endpoints for test and production environments.
-- Check that the incoming event's `devMode` matches the configured environment before any billing mutation.
-- A mismatch should be recorded and ignored without changing subscription state. Do not rely on `devMode` as authentication; it is a payload field.
-- Test the provider's actual behavior for environment mismatch and response codes before release.
-
-### A-3. Subscription payload contract — Unsupported / Uncertain (blocker for AbacatePay billing)
-
-The public webhook overview documents `subscription.completed`, `subscription.cancelled` and `subscription.renewed`, and shows the common envelope. It does not show a timestamp in that envelope, and the overview does not document all fields required by B7's internal subscription state machine. The public event list reviewed does not include `subscription.payment_failed`: [AbacatePay — Webhooks](https://docs.abacatepay.com/pages/webhooks).
-
-**Impact:** B7 cannot safely populate a required generic event timestamp or derive all provider-independent transitions from the overview alone. A missing failed-payment event also means the generic `past_due` state cannot be assumed to work for this provider.
-
-**Recommendation**
-- Before implementing the adapter, inspect the current detailed event reference for each subscription event and record exact JSON schemas, IDs, period fields, cancellation semantics and environment fields.
-- Confirm whether the current API exposes read operations for subscription and checkout state.
-- Treat `past_due` as unsupported for AbacatePay unless the provider exposes a documented failed-renewal signal or B7 deliberately derives it through reconciliation.
-- Do not invent timestamps or period-end values from event receipt time.
-
-### A-4. Delivery and duplicate behavior — Verified
-
-AbacatePay documents retries, stable event IDs across automatic retries, and the fact that `410` disables the webhook. It also recommends responding `2xx` after processing: [AbacatePay — Webhooks](https://docs.abacatepay.com/pages/webhooks), [Webhook Security](https://docs.abacatepay.com/pages/webhooks/security).
-
-**Important nuance:** manual re-sending from the dashboard may generate a new event ID, so event-ID deduplication alone does not prevent semantically duplicate business effects. State updates and side effects must also be idempotent by business object.
+- **H-a.** A lazily connected, per-request `pg` client closed with `ctx.waitUntil(client.end())` leaks nothing under Hyperdrive.
+- **H-b.** Holding a transaction with `SELECT … FOR UPDATE` across a provider API call is acceptable under Hyperdrive transaction pooling at webhook volumes.
+- **H-c.** Better Auth's database rate limiter is correct under concurrent requests from many isolates. Its storage contract requires atomicity, and its own database storage is assumed to satisfy it.
+- **H-d.** Loading the `member` row on every org-scoped request is cheap enough without caching.
 
 ---
 
-## 5. Stripe webhook verification and billing events
+## v0.1 findings: corrected status
 
-### S-1. Webhook signature verification on Workers — Requires executable validation (blocker)
-
-Stripe requires verification against the exact raw request body and the `Stripe-Signature` header: [Stripe — Webhooks](https://docs.stripe.com/webhooks). The current `stripe-node` source exposes `constructEventAsync` and the async verification path: [stripe-node — Webhooks.ts](https://github.com/stripe/stripe-node/blob/master/src/Webhooks.ts).
-
-Cloudflare has published a Workers example using Stripe's Web Crypto provider, but the example is older than the current runtime and SDK versions.
-
-**Recommendation**
-- Pin the Stripe SDK version.
-- Test `constructEventAsync` inside workerd using the exact SDK version, Web Crypto provider and Fetch HTTP client.
-- Verify valid payloads, wrong secrets, altered raw bodies, missing signature headers and stale timestamps.
-- Never parse and re-serialize the request body before signature verification.
-
-### S-2. Snapshot versus thin events — Uncertain / decision required
-
-Stripe's current webhook guide recommends thin events for most new integrations and documents separate endpoints for thin and snapshot payloads. It also documents `fetchRelatedObject()` for retrieving the latest object associated with a thin event: [Stripe — Webhooks](https://docs.stripe.com/webhooks).
-
-B7's mapping table is based on snapshot event types such as `customer.subscription.updated`. This is not inherently invalid, but it is a conscious choice against Stripe's current recommendation.
-
-**Recommendation [DECISION]:**
-- Decide and document whether v0.x deliberately supports snapshot events only or whether the first reference implementation will support thin events.
-- Do not claim generic Stripe support while leaving the event destination payload format unspecified.
-- Test the selected format in Workers before freezing the provider adapter.
-
-### B-1. Event timestamps cannot order subscription state — Incorrect (blocker)
-
-Stripe explicitly states that event delivery is not guaranteed to be ordered and that snapshot events have second-level `created` timestamps. It says not to use `created` to determine event order or whether an event was processed: [Stripe — Event ordering](https://docs.stripe.com/webhooks#event-ordering).
-
-B7 currently proposes skipping an update when `event.at` is older than `subscriptions.last_event_at`. That is not a safe ordering strategy.
-
-**Recommendation [DECISION]:**
-- Treat webhook events as signals that a provider object may have changed.
-- For Stripe, retrieve the current subscription state from Stripe and reconcile the local record from that authoritative object.
-- Serialize reconciliation per provider subscription or use an optimistic concurrency/version strategy so two concurrent fetches cannot commit stale snapshots out of order.
-- Remove generic timestamp-based event ordering. Keep receipt timestamps for audit/observability only.
-
-For AbacatePay, use the same reconciliation approach only if the current API exposes a reliable read endpoint. Otherwise, define explicit monotonic transition rules from documented event semantics and mark the remaining limitations.
-
-### B-2. Deduplication race and transactional outbox — Incorrect (blocker)
-
-B7's current pipeline inserts a `billing_events` row, then processes it if `processed_at` is null. Two concurrent deliveries can both observe an unprocessed row and execute the same work. The design also does not guarantee that a side effect is delivered if the Worker crashes after the database commit but before the queue/email action.
-
-**Recommendation [DECISION]:**
-- Model webhook receipt as a durable **inbox** with a unique key `(provider, event_id)`.
-- Claim work atomically using a conditional update/lease or a transaction that ensures only one worker owns the event at a time.
-- Use a **transactional outbox** for side effects. Persist the intended email/queue/provider action in the same database transaction as the subscription update; dispatch it asynchronously and mark it delivered only after success.
-- Make every consumer and external side effect idempotent. Where supported, pass an idempotency key to the external provider.
-- Add a recovery process for inbox/outbox rows that remain pending after a crash.
-
-An `INSERT ... ON CONFLICT DO NOTHING` alone is not a processing lock. "Exactly once" delivery across PostgreSQL, Cloudflare Queues and external providers should not be promised; design for at-least-once delivery plus idempotent effects.
-
-**Provider response timing:** Stripe recommends quickly returning `2xx` before complex work that may time out. AbacatePay documents a 30-second timeout and recommends responding after processing. The adapter should persist the verified event durably before acknowledging it, and its synchronous/async policy must respect each provider's documented retry contract.
-
-### B-3. Stripe subscription status mapping — Incorrect (blocker)
-
-Stripe's Subscription object currently documents these statuses: `incomplete`, `incomplete_expired`, `trialing`, `active`, `past_due`, `canceled`, `unpaid` and `paused`: [Stripe — Subscription object](https://docs.stripe.com/api/subscriptions/object).
-
-B7's internal state table does not define all of them.
-
-**Recommendation**
-- Map every provider status explicitly.
-- Define entitlement behavior for each status. A conservative default is no entitlement for unknown/unmapped statuses.
-- Treat `past_due` as entitled only during a clearly defined grace period.
-- Distinguish `cancel_at_period_end` from an already-canceled subscription; Stripe may leave the status `active` until the period ends.
-- Add tests for `unpaid`, `paused`, `incomplete_expired`, trial expiration, cancellation at period end, refunds and disputes.
+| v0.1 ID | v0.1 finding | v0.2 status |
+|---------|-------------|-------------|
+| T-1 | The Start + Hono dispatcher needed validation | **Superseded** by A1. The dispatcher is removed |
+| T-2 | CORS unnecessary | **Resolved**: same origin, so no CORS middleware |
+| H-1 | Hyperdrive caching makes reads stale | **Resolved in design** (A4). Still needs tests H-T1 and H-T2 |
+| A-1 | AbacatePay HMAC uses a public key | **Confirmed** and documented. Mitigation: URL secret plus fetching state from the provider |
+| A-1b | AbacatePay CLI scheme discrepancy | **Dropped**: it is not in current official docs |
+| A-2 | `devMode` not rejected | **Resolved in design** |
+| B-1 | Ordering by time | **Resolved in design** (A8) |
+| B-2 | AbacatePay has no timestamps | **Resolved in design**. The payload ID field is still UNVERIFIED (A-T3) |
+| B-3 | Dedup race | **Resolved in design**: inbox insert and state change share one transaction |
+| B-4 | Incomplete Stripe statuses | **Resolved**: full mapping from the API reference |
+| BA-2 | Instance per request | **Still UNVERIFIED** (BA-T1) |
+| BA-3 | Rate-limit storage | **Resolved**: `database` with `cf-connecting-ip` |
+| BA-4 | `tanstackStartCookies` | **Resolved**: auth flows only through `/api/auth/*` |
+| D-2, D-3 | Connection count and lifecycle | **Designed**: one client per request. Still UNVERIFIED (D-T1, D-T2) |
+| M-2 | `hasPermission` scope | **Avoided**: B7 checks membership and role from the member row. `hasPermission` is only allowed after M-T4 |
+| M-3 | RLS overstated | **Corrected**: RLS is optional defense in depth |
+| S-1 | Stripe on Workers | **Still UNVERIFIED** (S-T1) |
+| S-2 | Thin vs snapshot events | **Unchanged**: snapshot events for v0.2, revisit later |
+| W-1 | Free plan CPU | **Still UNVERIFIED**, blocker (A12) |
+| C-1…C-8 | Config model issues | **Resolved** by A11 |
 
 ---
 
-## 6. Multi-tenant authorization and isolation
+## Unresolved risks
 
-### M-1. Active organization is not proof of current membership — Requires explicit validation (blocker)
-
-Better Auth documents that `activeOrganizationId` defaults to `null` and is stored in the session when selected: [Better Auth — Organization plugin](https://better-auth.com/docs/plugins/organization).
-
-B7 correctly says organization IDs must come from the authenticated session, not client input. However, a session's active organization identifier should not be treated as proof that the user is still a member or still has the same role.
-
-**Recommendation**
-- `orgProcedure` must reject a null active organization with a typed error.
-- Resolve the current membership for the authenticated user and active organization through the cache-disabled database path.
-- Derive the effective role/permissions from current membership data, not solely from a client-side role or a potentially stale session field.
-- Scope every tenant-owned query, insert, update and delete by the resolved organization ID.
-- Use `NOT_FOUND` or `FORBIDDEN` consistently to avoid leaking cross-tenant resource existence.
-- Test member removal, role changes, active-org switching, cross-tenant resource IDs and concurrent permission changes.
-
-### M-2. RLS and Hyperdrive — Incorrect if described as impossible
-
-Cloudflare documents Hyperdrive transaction pooling and supports `SET` for the duration of a transaction or query: [Cloudflare — How Hyperdrive works](https://developers.cloudflare.com/hyperdrive/concepts/how-hyperdrive-works/).
-
-Therefore, saying PostgreSQL RLS is categorically incompatible with Hyperdrive is too strong. RLS can be implemented with transaction-scoped settings, but the application must guarantee that every tenant query runs in the correct transaction and context.
-
-**Recommendation:** keep application-level tenant scoping as the primary control. Describe RLS as optional defense in depth that requires dedicated tests and careful transaction management, not as an automatic feature of the template.
+| Risk | Impact | Owner of resolution |
+|------|--------|---------------------|
+| Password hashing exceeds Free-plan CPU (W-1) | The Paid plan becomes mandatory for email + password | Maintainer decision A12 after the measurement |
+| AbacatePay webhook `data` fields are undocumented (A-T3) | The adapter cannot extract the subscription ID, which blocks AbacatePay | Test with a real dev-mode event, or ask AbacatePay support |
+| AbacatePay authentication rests on a URL secret | Leaked logs could allow forged sync triggers. Impact is limited because state is fetched from the provider | Log redaction (observability standard) |
+| A transaction held across a provider fetch (H-b) | Connection pressure during webhook bursts (for example, monthly renewals) | B-T4. Fall back to queue mode if it fails |
+| TanStack Start API churn | Server-route and middleware APIs may change between versions | Pin versions, and rerun T-T1…T-T5 on upgrade |
+| Better Auth Drizzle adapter import path differs between pages | Build failure only | Record the resolved path in the reference implementation |
 
 ---
 
-## 7. Configuration model consistency and complexity
+## Required acceptance tests
 
-The following findings are based on the current `docs/configuration-model.md` and the profile READMEs. They should be reflected in the machine-readable schema and validator before a CLI is implemented.
+All tests run against a **deployed** Worker with a real Hyperdrive binding, unless marked *local*. Local development bypasses Hyperdrive, and the Vitest pool injects `nodejs_compat`.
 
-| ID | Issue | Classification | Recommendation |
-|---|---|---|---|
-| C-1 | `runtime` duplicates information already implied by language and deployment target in most profiles. | Simplification | Derive runtime where possible; keep a user-selectable runtime only where it genuinely changes the generated project. |
-| C-2 | `backendFramework` is derivable from language/backend strategy in the documented profiles. | Simplification | Derive it or remove it from user-facing configuration. |
-| C-3 | `backendStrategy = standalone` is semantically overloaded: it is redundant for API and used differently for Intelligence. | Incorrect | Restrict backend strategy to profiles where it has a meaningful choice; model Intelligence serving separately. |
-| C-4 | SQLite selection appears valid in combinations where the implementation would rely on `bun:sqlite`, which is not the Workers database binding. | Incorrect | Add a hard compatibility rule: Workers uses D1 for SQLite-shaped storage; do not emit `bun:sqlite` for a Workers target. |
-| C-5 | Better Auth mounting differs between Hono and Start-server-only strategies. | Incorrect (documentation gap) | Document the Start server route required when auth is enabled without Hono. |
-| C-6 | Organizations and invitations depend on an email delivery callback, while email appears independently optional. | Uncertain | Make the invitation behavior explicit: require email for invitations or disable invitations when email is absent. |
-| C-7 | `apiCommunication` mixes transport and contract-generation concerns. | Simplification | Separate RPC transport from whether a public OpenAPI surface is generated. |
-| C-8 | Hyperdrive cache policy is not represented in the configuration model. | Incorrect (missing consistency choice) | Default to cache-disabled for v0.x; add cached reads only as an explicit opt-in with documented stale-data semantics. |
-
-**Configuration model release blockers:** C-3 and C-4 must be corrected before the validator can claim that all accepted configurations are valid. C-5 must be documented before Fullstack supports `start-server` + Better Auth. The remaining items are simplifications or explicit feature-policy decisions.
-
----
-
-## 8. Required executable tests
-
-These tests are acceptance criteria for the first reference implementation. Use the exact versions recorded in the lockfile. Tests that depend on Hyperdrive, Workers compatibility flags or platform limits must include a deployed-Worker run; local Node tests are not sufficient.
-
-| ID | Test | Pass condition | Resolves |
-|---|---|---|---|
-| T-T1 | Single Worker integration | SSR, Start server function, Hono auth, oRPC RPC, OpenAPI and webhook routes work through the documented dispatcher. | T-1 |
-| T-T2 | Start context and error handling | Cookies, server context, thrown errors and streaming behave correctly with the exact Start entry. | T-2 |
-| T-T3 | Queue/Cron exports | Queue and scheduled handlers run from the same Worker without affecting HTTP routes. | T-1 |
-| BA-T1 | Auth instance lifecycle | Per-request factory initializes correctly under concurrency; one request's session/config never leaks into another. | BA-2 |
-| BA-T2 | Shared database handle | Auth and app services reuse the intended request-scoped database dependency; connection count is measured. | BA-2, D-2 |
-| BA-T3 | Rate limiting across isolates | Requests from one IP share a limit across separate isolates; another IP is independent. | BA-3 |
-| W-T1 | Free-plan password auth | Sign-up and sign-in complete within the Free CPU budget, or B7 documents the Paid-plan requirement. | BA-5 |
-| W-T2 | Runtime compatibility | Deployed Worker fails visibly when required compatibility is absent; production config includes the required flag/date. | BA-1 |
-| H-T1 | Revoked session freshness | Reusing a revoked session is rejected immediately through the uncached binding. | H-1 |
-| H-T2 | Membership and role freshness | Removed member or demoted role cannot access organization procedures after the change. | H-1, M-1 |
-| D-T1 | Drizzle/pg integration | CRUD, transactions, prepared queries and migrations work on the pinned versions through Hyperdrive. | D-1 |
-| D-T2 | Client lifecycle | No leaked connections during success, exception, abort, streaming and sustained load. | D-2 |
-| S-T1 | Stripe signature verification | Valid signature succeeds; changed body, wrong secret, missing header and stale timestamp fail inside workerd. | S-1 |
-| S-T2 | Stripe event format | The chosen snapshot or thin event destination parses and retrieves the expected subscription object. | S-2 |
-| S-T3 | Out-of-order Stripe events | Reversed and concurrent events converge to the current provider subscription state. | B-1 |
-| A-T1 | AbacatePay signature behavior | Valid query secret and documented HMAC behavior are tested; invalid secret is rejected. | A-1 |
-| A-T2 | AbacatePay environment guard | Dev-mode payload cannot mutate production billing state. | A-2 |
-| A-T3 | AbacatePay reconciliation | Subscription/checkout read endpoint and fields are proven against test-mode API responses before entitlements are granted. | A-3 |
-| B-T1 | Concurrent duplicate delivery | Two simultaneous deliveries produce one state mutation and no duplicate side effect. | B-2 |
-| B-T2 | Crash recovery | Crash between inbox persistence, state update, outbox dispatch and acknowledgment recovers without losing or duplicating business effects. | B-2 |
-| B-T3 | Exhaustive Stripe status mapping | Every Stripe status maps to an explicit entitlement decision; unknown values default to no entitlement. | B-3 |
-| M-T1 | Cross-tenant access | User in org A cannot read/update/delete org B resources by substituting IDs. | M-1 |
-| M-T2 | Null active organization | Organization procedure returns a typed no-active-org error. | M-1 |
-| M-T3 | Membership revocation | A removed member with an old session cannot access org procedures. | M-1 |
-| M-T4 | Role change | A demoted member loses privileged operations without requiring a new login. | M-1 |
+| ID | Test | Pass condition | Decides |
+|----|------|----------------|---------|
+| T-T1 | One Worker serves SSR, `/api/auth/*`, `/api/rpc/*`, and a webhook route | All respond correctly. A thrown loader error renders Start's error page | A1, A2 |
+| T-T2 | The custom `src/server.ts` exporting `fetch: handler.fetch` and `scheduled`. Trigger cron | Cron runs, HTTP behavior is identical to the built-in entry | S1, A9 |
+| T-T3 | `ANY` handler on `/api/rpc/$` receives `GET` and `POST` | Both reach oRPC. Otherwise switch to explicit methods | S3 |
+| T-T4 | A cross-site `POST /api/rpc/*` (foreign `Origin` and `Sec-Fetch-Site: cross-site`) with a valid session cookie | Rejected by `createCsrfMiddleware` | A1 security |
+| T-T5 | SSR loader using `createRouterClient` with function context, under two concurrent users | Each sees only their own data. No HTTP request to `/api/rpc` during SSR | A2 |
+| D-T1 | One request touching auth, an org procedure and billing | Exactly one `pg` connection is opened. Pure SSR pages open none | H-a |
+| D-T2 | Sustained load (for example, 50 RPS for 10 min) | No growth in origin connections, no errors | H-a |
+| H-T1 | Sign out, then replay the old cookie immediately | `UNAUTHORIZED` | A4, A6 |
+| H-T2 | Remove a member, who then immediately calls an org procedure | `FORBIDDEN` | A4, membership |
+| BA-T1 | CPU time of `createAuth()` per request | Recorded. Must be a small fraction of the plan limit | S2 |
+| BA-T2 | 101+ auth requests in 10 s from one IP (`cf-connecting-ip`), concurrently | `429` after the limit. A second IP is unaffected | H-c |
+| W-1 | Sign-up and sign-in on the Workers **Free** plan | Under 10 ms CPU, or the failure is recorded, which triggers A12 | A12 |
+| W-2 | Deploy with `nodejs_compat` removed | Deployed smoke test fails, proving the smoke test catches what Vitest misses | ADR-010 |
+| M-T1 | Org A user calls every tenant procedure with org B resource IDs | `NOT_FOUND`, no data | Tenant isolation |
+| M-T2 | Session with `activeOrganizationId = null` | `NO_ACTIVE_ORGANIZATION` | Membership |
+| M-T3 | `member` role calls a `billing: ["manage"]` procedure | `FORBIDDEN` | Permissions |
+| M-T4 | `auth.api.hasPermission` after membership removal, and with another org active | Documents its actual behavior. Allowed only if it rejects both. **Not needed:** B7 checks roles from the member row and never calls `hasPermission` | M-2 |
+| S-T1 | `constructEventAsync` with SubtleCrypto verifies a `generateTestHeaderString` payload in workerd (*local* and deployed) | Valid accepted. Tampered body, wrong secret and expired timestamp rejected | S4 |
+| S-T2 | `customer.subscription.updated` and `.deleted` delivered in reverse order | Final status `canceled` | A8 |
+| S-T3 | Checkout Session creation links the subscription to `customer_ref` | The webhook sync finds the right customer | S5 |
+| A-T1 | AbacatePay: (valid secret, valid HMAC), (valid, bad HMAC), (bad secret, valid HMAC) | 200 / 400 / 401 | Verification |
+| A-T2 | AbacatePay `devMode: true` event in production | 200, no state change | Verification |
+| A-T3 | Capture real dev-mode `subscription.completed`, `.renewed`, `.cancelled` and `.trial_started` payloads | The subscription ID location is documented in the adapter | A7, blocker |
+| B-T1 | The same event delivered twice concurrently | One inbox row, one state change | Dedup |
+| B-T2 | Failure after the inbox insert but before commit, then a retry | Retry succeeds, no orphan inbox row | Recovery |
+| B-T3 | Stripe `unpaid`, `paused`, `incomplete_expired`, and an unknown status | Not entitled. Unknown values are logged | Mapping |
+| B-T4 | 50 concurrent webhooks for 50 subscriptions (row lock plus provider fetch) | All succeed, no connection exhaustion | H-b |
+| B-T5 | Webhook dropped on purpose, then the reconciliation cron runs | State corrected within one cron run | A9 |
+| B-T6 | Browser lands on the checkout success URL before any webhook | Still `incomplete`, not entitled | Entitlement rule |
 
 ---
 
-## 9. Release blockers
+## Release blockers
 
-Do not ship the B7 Fullstack reference implementation or describe it as production-ready until:
+Updated for the Docker target. The first reference implementation may be **built** now. It must not be called **production-ready** until all of these are met:
 
-1. **Hyperdrive consistency:** auth, membership, permissions and billing use a cache-disabled path by default; H-T1 and H-T2 pass.
-2. **AbacatePay security:** the docs accurately describe the published-key HMAC limitation, URL secret redaction exists, environment separation is enforced, and A-T1/A-T2 pass.
-3. **AbacatePay contract:** A-T3 proves authoritative subscription/checkout reconciliation, or AbacatePay billing is explicitly marked unsupported/limited in v0.x.
-4. **Billing processing:** event-time ordering is removed, inbox claiming is concurrency-safe, outbox delivery is recoverable, and B-T1/B-T2 pass.
-5. **Stripe correctness:** raw-body signature verification passes inside workerd and the event payload format is an explicit decision.
-6. **Subscription entitlements:** every Stripe status has a defined mapping and unknown statuses fail closed.
-7. **Tenant isolation:** membership is revalidated through an uncached read on every organization-scoped operation.
-8. **Start + Hono composition:** T-T1 to T-T3 pass against a deployed Worker.
-9. **Auth runtime cost:** password auth is benchmarked and the Free/Paid Workers requirement is documented honestly.
-10. **Configuration validity:** C-3 and C-4 are fixed before a CLI or validator can advertise accepted configurations as valid.
+1. **T-T1, T-T3…T-T5, C-T1.** The Start composition works in the Compose stack (A1, A2).
+2. **H-T1, H-T2, M-T1…M-T3.** Revocation and membership removal take effect immediately, and tenant isolation holds.
+3. **C-T2, C-T3.** The proxy is the only source of the client IP, and HTTPS works on a public host.
+4. **BA-T2, D-T2.** Rate limiting holds across replicas, and the pool does not grow under load.
+5. **S-T1…S-T3, B-T1…B-T6.** Stripe billing is correct under duplicates, reordering, failure and reconciliation.
+6. **A-T1…A-T3.** Required only for AbacatePay to leave EXPERIMENTAL. It does not block a Stripe-only release.
+7. **C-T1 in CI.** The Compose stack E2E runs on every pull request.
 
-## 10. Production-feasibility verdict
+---
 
-| Component | Verdict |
-|---|---|
-| TanStack Start on Cloudflare Workers | **Feasible.** Official deployment and custom entrypoint guidance exists. |
-| Hono on Cloudflare Workers | **Feasible.** Official integration guidance exists. |
-| oRPC inside Hono | **Feasible.** Official Fetch adapter integration exists. |
-| TanStack Start + Hono path dispatcher in one Worker | **Plausible, unproven.** B7-specific deployed integration test required. |
-| Better Auth on Workers | **Feasible with compatibility configuration.** Instance lifecycle and CPU cost require tests. |
-| Better Auth + PostgreSQL via Hyperdrive | **Feasible with cache-disabled security-sensitive reads and a tested client lifecycle.** |
-| Drizzle + `pg` + Hyperdrive | **Feasible.** Driver choice is explicitly supported by Cloudflare. |
-| Multi-tenant authorization | **Feasible** with explicit membership checks, uncached reads and tenant-scoped queries. |
-| Stripe billing | **Feasible** after webhook verification, event format and state reconciliation are proven. |
-| AbacatePay billing | **Not yet production-qualified.** Documented webhook authentication is weaker than a conventional private signing secret, and the subscription API contract must be proven. |
-| Configuration model | **Sound direction, needs corrections.** Avoid adding a CLI until accepted configurations are validated by tests. |
+## Decisions requiring maintainer approval
 
-## 11. Decisions requiring maintainer approval
+**Approved by the maintainer on 2026-11-01:** A1–A11 and A13. A12 is obsolete. Still pending: ADR-014 (how options compose), and ADR-020/ADR-026 (Node.js instead of Bun for Web and API).
 
-No architecture changes have been applied by this review. The following decisions remain open:
-
-1. **Hyperdrive:** use one cache-disabled binding as the v0.x default (recommended), or generate both cached and uncached bindings from the start.
-2. **AbacatePay:** require authoritative API re-fetch before granting entitlements; if the API cannot support it, decide whether to mark this provider as limited or defer it.
-3. **Billing processing:** adopt a durable inbox + transactional outbox with asynchronous processing (recommended) or keep a strictly bounded synchronous path per provider.
-4. **Stripe events:** snapshot-only for the first release or thin events from the start.
-5. **Start + Hono:** keep the custom Worker dispatcher if T-T1 passes, otherwise compare it with the Start splat-route fallback.
-6. **Workers Free plan:** document Paid as required for email/password if the scrypt flow exceeds the Free CPU budget; do not weaken hashing silently.
-7. **Configuration model:** accept the simplifications in C-1, C-2 and C-7, and fix C-3/C-4 before implementing the validator.
-
-**Final assessment:** proceed to a minimal executable reference implementation only after the release blockers are converted into explicit tests. The next milestone should not be a broad SaaS template; it should be a thin vertical proof of the Worker entrypoint, one shared database client, Better Auth, one tenant-scoped procedure and one provider webhook. That proof will validate the riskiest architectural assumptions before B7 expands its surface area.
+| ID | Decision | Changes from v0.1 |
+|----|----------|-------------------|
+| A1 | Start server routes own all HTTP. Hono removed from Fullstack | v0.1 made Hono own `/api/*` |
+| A2 | oRPC is the only app transport. No business-logic server functions | v0.1 allowed both (`hono-orpc-with-start`) |
+| A3 | PostgreSQL only. D1 deferred in Fullstack | v0.1 offered D1 |
+| A4 | One cache-disabled Hyperdrive binding | v0.1 relied on default caching |
+| A5 | Better Auth is core in Fullstack | v0.1 allowed `auth = none` |
+| A6 | Cookie cache disabled by default | Not specified in v0.1 |
+| A7 | Stripe is the reference, and AbacatePay is EXPERIMENTAL | v0.1 treated them as equals |
+| A8 | Billing state sync with inbox and row lock. Entitlements derived. Outbox deferred | v0.1 used event-applied state and stored entitlements |
+| A9 | Cron derived from billing | v0.1 made cron optional |
+| A10 | KV and DO deferred, passkeys experimental, teams and dynamic roles deferred | v0.1 offered them |
+| A11 | Reduced configuration model. Auth deferred in Web and API. SQLite (TS) deferred | v0.1 had 18 dimensions |
+| A12 | Plan requirement decided after W-1 | Obsolete after A13 |
+| A13 | Docker Compose (Node.js + Caddy) replaces Cloudflare Workers as the Fullstack target ([ADR-013](docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target)) | v0.1 and v0.2 targeted Workers only |

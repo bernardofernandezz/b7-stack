@@ -1,0 +1,8 @@
+{
+  "profile": "fullstack",
+  "options": {
+    "email": "resend",
+    "organizations": true,
+    "billing": "stripe"
+  }
+}

@@ -13,14 +13,15 @@ Test behavior at module boundaries, not implementation details. Priorities:
 
 | Profile | Unit / integration | E2E |
 |---------|-------------------|-----|
-| Web, Fullstack | Vitest. On Workers, use `@cloudflare/vitest-pool-workers` so tests run in the Workers runtime with real bindings ([docs](https://developers.cloudflare.com/workers/testing/vitest-integration/)) | Playwright |
+| Fullstack | Vitest in Node against a real PostgreSQL. The post-deploy smoke test runs against the full Compose stack through Caddy | Playwright |
+| Web | Vitest. On Workers, use `@cloudflare/vitest-plugin` (formerly `@cloudflare/vitest-pool-workers`, now deprecated) so tests run in the Workers runtime with real bindings ([docs](https://developers.cloudflare.com/workers/testing/vitest-integration/)). The pool injects `nodejs_compat`, so a post-deploy smoke test is mandatory | — |
 | API (TS) | Vitest. Call `app.request()` on the Hono app directly | — |
 | API (Go), Systems | `go test`, `net/http/httptest` | — |
 | Intelligence | pytest. Use fixed seeds and small fixture datasets | — |
 
 ## Rules
 
-- **The database in tests is real.** Run PostgreSQL in Docker Compose or in the CI service container. Use D1 or SQLite locally through Wrangler or Bun. Do not mock the ORM.
+- **The database in tests is real.** Run PostgreSQL in Docker Compose or in the CI service container. Image, migration and proxy behavior is tested against the Compose stack (Fullstack) or a deployed Worker (Web, API on Workers). Do not mock the ORM.
 - **External providers are faked at the HTTP boundary.** Do not call live Stripe, AbacatePay or Resend in CI. Webhook tests use recorded payloads signed with a test secret.
 - **Tenant isolation has explicit tests.** User A of org X cannot read or write org Y's resources through any procedure.
 - **Tests are deterministic.** No sleeps, and fixed clocks for time-dependent billing logic.

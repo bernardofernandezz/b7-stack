@@ -4,8 +4,8 @@ These are baseline requirements for every profile. Profile-specific details link
 
 ## Secrets
 
-- Never commit secrets. Use `.dev.vars` (Workers) or `.env` locally, list them in `.gitignore`, and commit an `.env.example` with names only.
-- Production: on Workers, use `wrangler secret put`. On containers, use the platform's secret store. On GitHub Actions, use repository or environment secrets.
+- Never commit secrets. Use `.env` locally (`.dev.vars` for Workers targets), list them in `.gitignore`, and commit an `.env.example` with names only.
+- Production: on Workers, use `wrangler secret put`. On Docker Compose, keep `.env` on the host only (never in the image: `.dockerignore` excludes it) or use the platform's secret store. On GitHub Actions, use repository or environment secrets.
 - Server secrets never reach client bundles. Only explicitly public values (such as `TURNSTILE_SITE_KEY`) may be exposed.
 - Rotate on suspicion of exposure. Payment webhook secrets in particular support rolling (Stripe) or re-creation (AbacatePay).
 
@@ -14,11 +14,11 @@ These are baseline requirements for every profile. Profile-specific details link
 - Use Better Auth's session cookies: `HttpOnly`, `Secure`, `SameSite=Lax` or stricter. Do not store session tokens in `localStorage`.
 - Set `trustedOrigins` explicitly. With credentialed CORS, never use a `*` origin.
 - Require re-authentication or a fresh session for sensitive actions such as changing email or password, deleting an organization, or changing billing.
-- Rate-limit sign-in, sign-up, password reset and invitation endpoints. Better Auth includes rate limiting, so configure its storage for Workers. **Uncertain:** confirm the right storage backend (database or KV) against current Better Auth docs.
+- Rate-limit sign-in, sign-up, password reset and invitation endpoints. Use Better Auth's `storage: "database"`, never memory, so limits hold across replicas. Read the client IP from a header that only your proxy can set: `x-forwarded-for` behind Caddy (Fullstack), `cf-connecting-ip` on Workers. See [authentication](../../stacks/fullstack/authentication.md#rate-limiting).
 
 ## CSRF
 
-- Cookie-authenticated, state-changing endpoints must reject cross-site requests. Better Auth checks `Origin` against `trustedOrigins` for its own routes. For your own Hono routes, use Hono's `csrf()` middleware or an equivalent Origin check.
+- Cookie-authenticated, state-changing endpoints must reject cross-site requests. Better Auth checks `Origin` against `trustedOrigins` for its own routes. In B7 Fullstack, attach TanStack Start's `createCsrfMiddleware()` to the oRPC route, and keep it on server functions when you define `src/start.ts` ([architecture](../../stacks/fullstack/architecture.md#request-flow)). In B7 API (Hono), use Hono's `csrf()` middleware when cookies are used.
 - Webhook endpoints are **exempt** from CSRF because they are not cookie-authenticated. They rely on signature verification instead.
 
 ## Input validation
@@ -30,7 +30,7 @@ These are baseline requirements for every profile. Profile-specific details link
 ## Authorization and tenant isolation
 
 - Run authorization checks on the server for every request. A hidden UI element is not access control.
-- Scope every tenant-owned query by `organizationId`, taken from the **session**, never from client input alone. See [fullstack architecture](../../stacks/fullstack/architecture.md#tenant-isolation).
+- Scope every tenant-owned query by `organizationId` from the session, **after** you verify current membership. Never take it from client input. See [authentication](../../stacks/fullstack/authentication.md#authorization-model).
 
 ## Webhooks
 
@@ -40,7 +40,7 @@ These are baseline requirements for every profile. Profile-specific details link
 4. Deduplicate by provider event ID before side effects.
 5. Return `2xx` quickly. Move slow work to a queue.
 
-Provider-specific details are in [billing](../../stacks/fullstack/billing.md#webhook-verification).
+Provider-specific details are in [billing](../../stacks/fullstack/billing.md#webhook-verification). A webhook signature keyed with a **published** key (AbacatePay) proves integrity, not origin.
 
 ## Bot protection
 

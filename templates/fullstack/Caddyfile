@@ -1,0 +1,17 @@
+# APP_URL with https:// and a public domain gets an automatic Let's Encrypt certificate.
+# Caddy ignores X-Forwarded-For sent by clients and sets it to the real client IP, which Better Auth rate-limits on.
+{$APP_URL} {
+	encode zstd gzip
+	# #if billing
+	# Internal endpoints (the scheduler's reconcile call) are reachable only on the Compose network.
+	respond /api/internal/* 404
+	# #endif
+	# Upstreams come from Docker DNS, re-resolved every few seconds, so `docker compose up --scale app=N` spreads load.
+	reverse_proxy {
+		dynamic a app 3000 {
+			refresh 5s
+		}
+		lb_policy round_robin
+		health_uri /
+	}
+}

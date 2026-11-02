@@ -1,0 +1,53 @@
+{
+  "$comment": "Options this template supports and what each one owns (ADR-014). The template itself has every option on.",
+  "options": {
+    "email": {
+      "choices": ["resend", "none"],
+      "default": "resend"
+    },
+    "organizations": {
+      "choices": [false, true],
+      "default": false
+    },
+    "billing": {
+      "choices": ["none", "stripe"],
+      "default": "none"
+    }
+  },
+  "features": {
+    "email": {
+      "files": [
+        "src/modules/email",
+        "src/routes/forgot-password.tsx",
+        "src/routes/reset-password.tsx",
+        "test/email.test.ts",
+        "test/password-reset.test.ts",
+        "e2e/password-reset.spec.ts",
+        "src/modules/auth/email-ui.tsx",
+        "e2e/helpers.ts"
+      ],
+      "dependencies": ["resend"]
+    },
+    "organizations": {
+      "files": [
+        "src/modules/organizations",
+        "src/routes/organization.tsx",
+        "src/routes/accept-invitation.$id.tsx",
+        "test/organizations.test.ts",
+        "e2e/organizations.spec.ts"
+      ]
+    },
+    "billing": {
+      "files": [
+        "src/modules/billing",
+        "src/routes/billing.tsx",
+        "src/routes/api/webhooks",
+        "src/routes/api/internal",
+        "test/billing.test.ts",
+        "test/billing-sync.test.ts",
+        "e2e/billing.spec.ts"
+      ],
+      "dependencies": ["stripe"]
+    }
+  }
+}

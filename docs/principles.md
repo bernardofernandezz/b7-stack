@@ -11,8 +11,8 @@ Each principle comes with the decision rules it leads to. When two options are o
 
 ## 2. Performance Matters
 
-- Run TypeScript on Bun or the Workers runtime, run systems code in Go, and serve Python models with ONNX Runtime where possible.
-- Keep data close to compute. For example, Workers reach PostgreSQL through Hyperdrive for connection pooling and caching.
+- Run TypeScript on Node.js (LTS) or the Workers runtime, run systems code in Go, and serve Python models with ONNX Runtime where possible.
+- Keep data close to compute. For example, the Fullstack app and PostgreSQL run in the same Compose network, with one connection pool per process.
 - Measure before you add caching. Redis or KV must have a documented reason.
 
 ## 3. Explicit Architecture
@@ -25,7 +25,7 @@ Each principle comes with the decision rules it leads to. When two options are o
 ## 4. Developer Experience
 
 - Types flow end to end: database (Drizzle or SQLC), then procedures (oRPC), then client.
-- One command starts local development. Remote services can be emulated locally where the platform allows it, for example `wrangler dev` bindings.
+- One command starts local development. Remote services can be emulated locally where the platform allows it, for example `docker compose up` runs the whole Fullstack stack.
 - Error messages and docs come before conventions that have to be memorized.
 
 ## 5. Production Ready

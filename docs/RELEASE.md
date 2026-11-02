@@ -74,10 +74,11 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](../templates/fullstack/README.md#verification-status).
-- [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: npm trusted publishing is not set up yet. needs: 0.1, 0.2, 0.3, 2.1
-  - create-b7 is now a Go binary in six npm packages ([cli/README.md › Release](../cli/README.md#release)). On npmjs.com, add a trusted publisher (GitHub Actions, workflow `release.yml`) to `create-b7` and to each `create-b7-<os>-<arch>`. A package name that does not exist yet needs one first manual `npm publish` with a 2FA code before a trusted publisher can be added.
-  - Then `git tag v0.2.0-preview.0 && git push origin v0.2.0-preview.0`; `release.yml` publishes with the `preview` dist-tag.
-  - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
+- [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: the six npm packages do not exist yet, and trusted publishing needs them first. needs: 0.1, 0.2, 0.3, 2.1
+  - create-b7 is a Go binary in six npm packages ([cli/README.md › Release](../cli/README.md#release)). `CHANGELOG.md` already has `## [0.2.0-preview.0]`, and `cli/npm/create-b7/package.json` is at that version.
+  - First publish, by hand, on `main` after the release merges: `git tag v0.2.0-preview.0`, then in `cli/` `goreleaser build --clean && node scripts/npm-packages.js`, then `npm publish --access public --tag preview` in each `npm-dist/create-b7-*/` and last in `npm-dist/create-b7/` (2FA on each).
+  - On npmjs.com, add a trusted publisher (GitHub Actions, workflow `release.yml`) to all six packages.
+  - `git push origin v0.2.0-preview.0`: `release.yml` creates the GitHub release and skips the npm versions already published. Later releases need only the version bump and the tag.
 
 ## Phase 3: Template improvements
 

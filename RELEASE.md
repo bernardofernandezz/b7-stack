@@ -36,7 +36,7 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
 
 | Task | What it needs | Cost |
 |------|---------------|------|
-| [2.4](#phase-2-docker-target-and-preview-release) Publish the preview | An npm 2FA code | Free |
+| [2.4](#phase-2-docker-target-and-preview-release) Publish the preview | npm trusted publishing for the six `create-b7` packages, then a `v0.2.0-preview.0` tag | Free |
 | [2.2](#phase-2-docker-target-and-preview-release) A public host | A small VPS with Docker and a domain | About US$5/month plus a domain |
 | [5.3](#phase-5-organizations-and-stripe-10) Stripe test mode | A Stripe account and a webhook endpoint on 2.2 | Free |
 | [5.5](#phase-5-organizations-and-stripe-10) A real email | A Resend account and a verified domain | Free tier |
@@ -74,8 +74,9 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
   - *Done when:* the site answers over HTTPS with a valid certificate.
 - [~] **2.3 Run C-T3 against the public host.** blocked: waits for 2.2. needs: 2.2
   - *Done when:* `BASE_URL=https://<domain> pnpm exec playwright test smoke` is green, cookies carry `Secure`, and the result is a row in the template's [Verification status](templates/fullstack/README.md#verification-status).
-- [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: npm requires a 2FA code (run `cd cli && npm publish --tag preview --otp=<code>`). needs: 0.1, 0.2, 0.3, 2.1
-  - `cd cli && npm publish --tag preview` at version `0.2.0-preview.0`, then `git tag v0.2.0-preview.0`.
+- [~] **2.4 HUMAN: publish the preview.** Authorized 2026-11-01; blocked: npm trusted publishing is not set up yet. needs: 0.1, 0.2, 0.3, 2.1
+  - create-b7 is now a Go binary in six npm packages ([cli/README.md › Release](cli/README.md#release)). On npmjs.com, add a trusted publisher (GitHub Actions, workflow `release.yml`) to `create-b7` and to each `create-b7-<os>-<arch>`. A package name that does not exist yet needs one first manual `npm publish` with a 2FA code before a trusted publisher can be added.
+  - Then `git tag v0.2.0-preview.0 && git push origin v0.2.0-preview.0`; `release.yml` publishes with the `preview` dist-tag.
   - *Then the agent:* moves the `[Unreleased]` entries into `## [0.2.0-preview.0] - <date>` in `CHANGELOG.md`, and changes the root README install line to `npm create b7@preview`.
 
 ## Phase 3: Template improvements
@@ -138,7 +139,7 @@ The code is ahead of operations. These four HUMAN tasks are all that stand betwe
 - [~] **5.6 Declare production-ready.** blocked: waits for 1.1, 2.2, 5.3 and 5.5. needs: every task above
   - *Done when:* release blockers 1–5 and 7 are all met, the "Preview" notices in the root README, the template README and `cli/README.md` are replaced, and M1–M4 in `ROADMAP.md` are marked done.
 - [~] **5.7 HUMAN: publish 1.0.0.** blocked: waits for 5.6. needs: 5.6
-  - Bump `cli/package.json` to `1.0.0`, `npm publish`, `git tag v1.0.0`. *Then the agent* closes the `## [1.0.0]` section in `CHANGELOG.md`.
+  - Bump `cli/npm/create-b7/package.json` to `1.0.0`, then push the tag `v1.0.0` (`release.yml` publishes). *Then the agent* closes the `## [1.0.0]` section in `CHANGELOG.md`.
 
 ---
 
@@ -203,7 +204,7 @@ From [STRATEGY.md](STRATEGY.md). These tasks do not block 1.0 and can run in par
   - *Done when:* two people can merge, and `CONTRIBUTING.md` says how decisions are made.
 - [ ] **6.16 `create-b7 update [dir]`.** needs: 6.3 approved, 6.5
   - *Spec:* the 6.3 ADR
-  - *Files:* `cli/update.js`, `cli/index.js` (subcommand), `cli/test/update.test.js`, `cli/README.md`. Base = `generate()` of `create-b7@<b7.json version>` (from `npm pack`); theirs = `generate()` of the bundled template, same configuration; both formatted with the project's Biome before comparing. Per file: `git merge-file`, with adds and deletes resolved against base; `package.json` merged per dependency key, keeping `name`; then `pnpm install --lockfile-only`, `pnpm db:generate`, and the new `version` in `b7.json`
+  - *Files:* `cli/internal/update/`, `cli/main.go` (subcommand), its tests, `cli/README.md`. Base = `generate.Generate` over the template of the `v<b7.json version>` GitHub release archive; theirs = `generate.Generate` over the embedded template, same configuration; both formatted with the project's Biome before comparing. Per file: `git merge-file`, with adds and deletes resolved against base; `package.json` merged per dependency key, keeping `name`; then `pnpm install --lockfile-only`, `pnpm db:generate`, and the new `version` in `b7.json`
   - *Done when:* tests with two fixture templates cover a clean merge, a conflict (markers left, file listed, exit non-zero), a deleted file and a new dependency.
 - [ ] **6.17 Upgrade log in CI.** needs: 6.16
   - *Spec:* [ROADMAP.md › M8](ROADMAP.md#m8-upgrade-path-strategy)

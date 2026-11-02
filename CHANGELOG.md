@@ -11,6 +11,7 @@ All notable changes to B7 are recorded here. The format follows [Keep a Changelo
 - `RELEASE.md`: adoption tasks 6.5–6.10 (ADR-015 approval, social sign-in, product screens, `b7.json` count, community, agent skill) and the HUMAN tasks that unblock 1.0.
 
 ### Changed
+- `create-b7` is a Go binary (Charm prompts, per-step progress with times, the failing step's output on error, Node.js and pnpm checks), still installed with `npm create b7` through per-platform optional dependencies. Releases run from a `v*` tag with GoReleaser and npm trusted publishing. The landing keeps a JS copy of the rules, tested against the same fixtures.
 - `STRATEGY.md`: B7 Bot (pull requests with template updates) as the form of the upgrade path, a public agent eval, dogfooding, and one category before the market; `RELEASE.md` tasks 6.11–6.13.
 - `STRATEGY.md`: first impression and agent-native are P0, global launch first with LATAM second, the north star is measured by counting `b7.json` files.
 - ADR-015 (Proposed): two targets from one TanStack Start app; the Docker monorepo is rejected. `ROADMAP.md` moves the targets before the upgrade path and adds M10.5 (product UI).

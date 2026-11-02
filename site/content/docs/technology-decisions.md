@@ -95,6 +95,12 @@ These are concise, ADR-style decisions. **Status** is `Accepted` (unchanged, or 
 **Trade-off:** the test matrix grows by one build and one E2E run per configuration. Serverless gives up long-lived connections and background workers (`queues` requires `docker`) and ties operations to the platform chosen. The API is not a separately scalable process; scale the whole app instead.
 **Rejected:** a `docker` monorepo (`apps/web` TanStack Start, `apps/api` Hono + oRPC, `packages/core`): two images, two processes and two layouts for one maintainer to test and upgrade, and it would bring Hono back against ADR-002. Hono inside the Start app (two routers in one process). A serverless target per vendor (Nitro presets already cover them).
 
+### ADR-016: create-b7 is a Go binary installed through npm
+**Status:** Proposed (maintainer request, 2026-11-01).
+**Decision:** `create-b7` is written in Go, with the templates embedded (`go:embed`), [huh](https://github.com/charmbracelet/huh) prompts and [lipgloss](https://github.com/charmbracelet/lipgloss) output. `npm create b7` keeps working: the `create-b7` npm package is a small launcher, and one `create-b7-<os>-<arch>` package per platform holds the binary as an optional dependency, the pattern esbuild uses. A `v*` tag runs GoReleaser and publishes the packages with npm trusted publishing. The landing page keeps a JS copy of the configuration rules and the region engine (`site/src/lib/b7/`), and `cli/testdata/` holds the cases that both the Go tests and the JS tests run.
+**Why:** a richer, more usable UI (one form per step, progress with times, the failing step's output on error, numbered prompts without a terminal) and one self-contained binary that `b7 update` and the B7 Bot can run anywhere. It follows B7's own rule for CLIs ([ADR-024](#other-profiles)).
+**Trade-off:** generation itself is not faster in any way a user notices: `pnpm install` and the build dominate. Six npm packages and a GoReleaser release replace one `npm publish`. The rules exist twice, guarded only by the shared fixtures. Contributors to `cli/` need Go.
+
 ## Other profiles
 
 | ADR | Profile | Decision | Status |

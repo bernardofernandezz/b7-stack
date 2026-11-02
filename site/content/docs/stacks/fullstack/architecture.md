@@ -49,7 +49,7 @@ Each responsibility has exactly one owner.
 | TLS, client IP | **Caddy** | `Caddyfile` | [Caddy reverse_proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) |
 
 **What is deliberately absent:**
-- **Hono is not part of B7 Fullstack** (`A1`). It stays the router of [B7 API](/docs/stacks/api).
+- **No Hono** (`A1`). Start server routes own `/api/*` on both [targets](#targets).
 - **Start server functions (`createServerFn`) are not used for business logic** (`A2`). oRPC is the only app transport, so there is one validation, error and middleware model.
 - **No custom server entry.** srvx serves Start's own fetch handler. Background work runs in separate services, not in the HTTP process.
 
@@ -107,6 +107,18 @@ Module rules:
 - Other modules import only a module's `service.ts` functions and its oRPC sub-router, never its tables.
 - Every service function that touches tenant data takes `organizationId` as an explicit argument (see [authentication](/docs/stacks/fullstack/authentication#tenant-isolation)).
 - Modules never call each other over HTTP inside the app.
+
+## Targets
+
+Both targets of [ADR-015](/docs/technology-decisions#adr-015-fullstack-offers-two-targets-from-one-tanstack-start-app) (proposed) use the layout this document describes. Only the build and the operations files differ:
+
+| | `docker` (default, generated today) | `serverless` |
+|---|---|---|
+| Runtime | Node.js container (srvx) behind Caddy | A Nitro preset: Vercel, Netlify, Cloudflare |
+| Database | PostgreSQL in Compose, one pool per process | Managed PostgreSQL (Neon, Supabase), pooled connection string, one client per invocation |
+| Scheduled jobs | `scheduler` Compose service | Platform cron calling `/api/internal/*` |
+
+Module boundaries, the authorization chain and tenant isolation are the same on both targets.
 
 ## Scaling without microservices
 

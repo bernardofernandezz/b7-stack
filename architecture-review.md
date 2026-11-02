@@ -221,7 +221,7 @@ Updated for the Docker target. The first reference implementation may be **built
 
 ## Decisions requiring maintainer approval
 
-**Approved by the maintainer on 2026-11-01:** A1–A11 and A13. A12 is obsolete. Still pending: ADR-014 (how options compose), and ADR-020/ADR-026 (Node.js instead of Bun for Web and API).
+**Approved by the maintainer on 2026-11-01:** A1–A11 and A13. A12 is obsolete. Still pending: ADR-014 (how options compose), ADR-015 (one app, two targets through Nitro presets), and ADR-020/ADR-026 (Node.js instead of Bun for Web and API).
 
 | ID | Decision | Changes from v0.1 |
 |----|----------|-------------------|

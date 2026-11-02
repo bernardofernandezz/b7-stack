@@ -71,7 +71,7 @@ The app container must not be published directly: rate limiting trusts `X-Forwar
 
 ## How it is put together
 
-Request flow and ownership follow [architecture.md](../../stacks/fullstack/architecture.md). In short:
+Request flow and ownership follow [architecture.md](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/stacks/fullstack/architecture.md). In short:
 
 | Path | Role |
 |------|------|
@@ -87,8 +87,8 @@ Request flow and ownership follow [architecture.md](../../stacks/fullstack/archi
 
 Decisions taken while implementing:
 
-- **No Hono** in this profile, per [ADR-002 / A1](../../docs/technology-decisions.md#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1). Start server routes own `/api/*`. Hono remains the router of [B7 API](../../stacks/api/README.md).
-- **Docker instead of Cloudflare Workers**, per [ADR-013](../../docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target). A long-lived process keeps one connection pool, so there is no Hyperdrive.
+- **No Hono** in this profile, per [ADR-002 / A1](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/technology-decisions.md#adr-002-tanstack-start-owns-all-http-routing-and-hono-is-removed-from-fullstack-a1). Start server routes own `/api/*`. Hono remains the router of [B7 API](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/stacks/api/index.md).
+- **Docker instead of Cloudflare Workers**, per [ADR-013](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/technology-decisions.md#adr-013-docker-compose-replaces-cloudflare-workers-as-the-fullstack-target). A long-lived process keeps one connection pool, so there is no Hyperdrive.
 - **srvx** serves the build. It is the server TanStack Start's own preview uses, and it is stable, while Nitro's Node preset is still a release candidate.
 - **Relative imports, no path alias.** The Better Auth CLI and Drizzle Kit load `src/db/schema.ts` outside Vite and do not resolve aliases.
 - **`disableOriginCheck: false` is explicit.** Better Auth skips the origin check when `NODE_ENV=test`, so without it the tests would not exercise production behavior.
@@ -139,15 +139,15 @@ Measured on 2026-11-01 with the versions in `pnpm-lock.yaml`. *Local* means `vit
 
 ## Adding optional modules
 
-None of these are installed. Each adds only what the [feature table](../../docs/configuration-model.md#fullstack-features-what-each-one-adds) lists.
+None of these are installed. Each adds only what the [feature table](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/configuration-model.md#fullstack-features-what-each-one-adds) lists.
 
 | Option | Where it plugs in | State |
 |--------|-------------------|-------|
 | `oauthProviders` | `socialProviders: { github: { clientId, clientSecret } }` in `createAuth`, the two env vars in `src/env.ts`, a button calling `authClient.signIn.social` | Prepared, not configured or tested |
-| `organizations` (needs email) | Better Auth `organization` plugin, `scoped` in `src/rpc/middleware.ts` with `requireMembership`/`requirePermission` from `src/modules/organizations/`, `organization_id` on tenant tables ([chain](../../stacks/fullstack/authentication.md#with-organizations-optional)) | `create-b7 --organizations` |
+| `organizations` (needs email) | Better Auth `organization` plugin, `scoped` in `src/rpc/middleware.ts` with `requireMembership`/`requirePermission` from `src/modules/organizations/`, `organization_id` on tenant tables ([chain](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/stacks/fullstack/authentication.md#with-organizations-optional)) | `create-b7 --organizations` |
 | `billing` | `src/modules/billing/` (Stripe adapter, inbox sync, plans), `src/routes/api/webhooks/stripe.ts`, `src/routes/api/internal/reconcile.ts` and the `scheduler` service | `create-b7 --billing stripe`; AbacatePay not implemented (M5) |
 | `publicApi` | `@orpc/openapi`, `src/routes/api/v1.$.ts` with `OpenAPIHandler` over the same router | Not implemented |
-| `turnstile`, `sentry`, `passkeys` | See [infrastructure.md](../../stacks/fullstack/infrastructure.md#optional-services) | Not implemented |
+| `turnstile`, `sentry`, `passkeys` | See [infrastructure.md](https://github.com/bernardofernandezz/b7-stack/blob/main/site/content/docs/stacks/fullstack/infrastructure.md#optional-services) | Not implemented |
 
 ## Known limitations
 

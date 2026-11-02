@@ -10,7 +10,7 @@ import { applyRegions, holds } from "./regions.js";
 
 // Never copied from a working template checkout. b7.features.json describes the template, not the project.
 const SKIP = new Set(["node_modules", "dist", ".tanstack", ".env", "test-results", "playwright-report", "b7.features.json"]);
-// Configuration options (docs/configuration-model.md). Each template's b7.features.json says which it supports.
+// Configuration options (site/content/docs/configuration-model.md). Each template's b7.features.json says which it supports.
 const OPTION_FLAGS = { email: { type: "string" }, organizations: { type: "boolean" }, billing: { type: "string" } };
 
 const here = import.meta.dirname;

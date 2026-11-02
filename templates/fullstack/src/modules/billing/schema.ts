@@ -1,7 +1,7 @@
 import { index, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { SubscriptionStatus } from "./domain";
 
-// Tables from stacks/fullstack/billing.md › Tables. `customer_ref` is the organization ID with organizations, else the user ID.
+// Tables from site/content/docs/stacks/fullstack/billing.md › Tables. `customer_ref` is the organization ID with organizations, else the user ID.
 
 export const billingCustomers = pgTable(
   "billing_customers",
